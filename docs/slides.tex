@@ -6,9 +6,13 @@
 \author{Alex Hirsch \and Patrick Ober}
 \date{2016-01-15}
 
+\usepackage{multicol}
+
 \AtBeginSection[] {
     \begin{frame}{Outline}
-        \tableofcontents[currentsection]
+        \begin{multicols}{2}
+            \tableofcontents[currentsection]
+        \end{multicols}
     \end{frame}
 }
 
@@ -17,7 +21,9 @@
 \maketitle
 
 % \begin{frame}{Outline}
-%     \tableofcontents
+%     \begin{multicols}{2}
+%         \tableofcontents
+%     \end{multicols}
 % \end{frame}
 
 \begin{frame}{Acknowledgement}
@@ -167,6 +173,58 @@
             kernel to take over (context switch).
         \end{column}
     \end{columns}
+\end{frame}
+
+\section{Exploit printf}
+
+\section{Buffer Overflow}
+
+\begin{frame}{Smash or Corrupt}
+
+\end{frame}
+
+\begin{frame}{Overwrite a Flag}
+    \begin{center}
+        \huge Demonstration
+    \end{center}
+\end{frame}
+
+\begin{frame}{Overwrite the stored Return Address}
+    \begin{center}
+        \huge Demonstration
+    \end{center}
+\end{frame}
+
+\section{Shell Code}
+
+\section{Data Execution Prevention (DEP)}
+
+\section{Return Oriented Programming (ROP)}
+
+\begin{frame}{Return to libC}
+
+\end{frame}
+
+\section{Address Space Layout Randomization (ASLR)}
+
+\section{Heap Corruption}
+
+\section{Stack Cookies}
+
+\section{Code Pointer Integrity}
+
+\section{ARM and x86\_64}
+
+\section{Fuzzing}
+
+\section{Polymorphic Code}
+
+\section*{Conclusion}
+
+\begin{frame}{Fin}
+   \begin{center}
+       \huge OMG finally\dots
+   \end{center}
 \end{frame}
 
 \end{document}
