@@ -1,0 +1,174 @@
+% vim:set spell tw=79:
+
+\documentclass[beamer]{uibk}
+\title{Exploitation Techniques and Mitigations}
+\subtitle{Dark Arts of Computer Science}
+\author{Alex Hirsch \and Patrick Ober}
+\date{2016-01-15}
+
+\usepackage{svg}
+
+\AtBeginSection[] {
+    \begin{frame}{Outline}
+        \tableofcontents[currentsection]
+    \end{frame}
+}
+
+\begin{document}
+
+\maketitle
+
+% \begin{frame}{Outline}
+%     \tableofcontents
+% \end{frame}
+
+\begin{frame}{Acknowledgement}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            We use a lot from RPISEC, a university course about modern
+            exploitation at Rensselaer Polytechnic Institute (2015), because
+            \dots
+
+            \begin{description}
+                \item[of them:] They did a great job.
+                \item[of you:] You will see familiar material.
+                \item[of us:] We are lazy.
+            \end{description}
+
+            Check them out at \url{http://rpis.ec/} and
+            \url{https://github.com/RPISEC/MBE}.
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \includegraphics[height=0.7\textheight]{ripsec}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\section{Platform x86}
+
+\begin{frame}{Why?}
+    \begin{itemize}
+        \item It's simpler, yet not overly simplified.
+        \item Most techniques can be translated easily.
+        \item Most material covers x86.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Registers}
+    \begin{center}
+        \includegraphics[width=\textwidth]{x86_registers}
+    \end{center}
+    \sidenote{- Wikipedia}
+\end{frame}
+
+\begin{frame}{Memory Management}
+    \begin{columns}
+        \begin{column}{0.45\textwidth}
+            Real memory is managed by your OS kernel, a process sees only
+            \textbf{virtual} memory.
+
+            \medskip
+
+            Memory is segmented (\textbf{pages}), which are handled by hardware
+            (\textbf{memory management unit}) and software (kernel).
+
+            \medskip
+
+            \SI{4}{\kibi\byte} typical page size, addresses can be decomposed,
+            page pointer + offset:
+
+            \[\mathtt{0xA1B2C3D4} \implies \texttt{0xA1B2C000} + \mathtt{0x3D4}\]
+        \end{column}
+        \begin{column}{0.55\textwidth}
+            \includegraphics[height=0.7\textheight]{pages}
+        \end{column}
+    \end{columns}
+    \sidenote{- Unix Internals by Uresh Vahalia}
+\end{frame}
+
+\begin{frame}{Process' Memory}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{center}
+                \includegraphics[height=0.8\textheight]{mem_layout}
+            \end{center}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            You know some of this, other talks also focus on this.
+
+            \bigskip
+
+            We'll see:
+            \begin{itemize}
+                \item Pages have permissions \texttt{rwx} (DEP)
+                \item Layout not always the same (ALSR)
+                \item Lot's of pointers
+            \end{itemize}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Calling Convention}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            Defines:
+
+            \begin{itemize}
+                \item where to place arguments
+                \item where to place return value
+                \item where to place return address
+                \item who prepares the stack
+                \item who cleans afterwards\\
+                    (caller vs.\ callee)
+            \end{itemize}
+
+            Depends on:
+
+            \begin{itemize}
+                \item your platform
+                \item your toolchain (language)
+                \item your settings (compiler flags)
+            \end{itemize}
+
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            I know, Radu never told you.\dots
+
+            \medskip
+
+            \textbf{C Declaration:}
+
+            \begin{itemize}
+                \item arguments on stack (reverse order)\\
+                    aligned to \SI{16}{\byte} boundary
+                \item return via register (\texttt{EAX} / \texttt{ST0})
+                \item return address on stack (old \texttt{IP})
+                \item old base pointer (\texttt{BP})
+            \end{itemize}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{System Call \& Protection Rings}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \includegraphics[width=\textwidth]{x86_rings}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            Your CPU can switch from a more privileged state to a less
+            privileged one.
+
+            \bigskip
+
+            Kernel does not run always, process cannot do everything (enforced
+            by hardware).
+
+            \bigskip
+
+            Process uses a \emph{System Call} (own instruction) to notify the
+            kernel to take over (context switch).
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\end{document}

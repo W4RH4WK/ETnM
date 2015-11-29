@@ -1,0 +1,74 @@
+\mode<all>
+
+\AtBeginDocument{%
+    \pgfdeclareverticalshading{uibk@topshade}{\paperwidth}{%
+        color(0pt)=(bg);%
+        color(4pt)=(black!50!bg)%
+    }%
+}
+
+% header
+\setbeamertemplate{headline}{%
+    \pgfdeclareimage[height=5.69mm]{line1}{gfx/line.pdf}
+    \pgfuseimage{line1}
+    \vskip-0.2pt
+    \pgfuseshading{uibk@topshade}
+    \vskip-2pt
+}
+
+% footer
+\setbeamertemplate{footline}{%
+    \leavevmode%
+    \hbox{%
+        \begin{beamercolorbox}[wd=.33\paperwidth,ht=3.3mm,left,sep=.25mm]%
+            {footline}
+            ~\strut\insertshortauthor%
+            \ifx\insertinstitute\@empty \else~~(\insertshortinstitute)\fi%
+        \end{beamercolorbox}%
+        \begin{beamercolorbox}[wd=.34\paperwidth,ht=3.3mm,center,sep=.25mm]%
+            {footline}
+            \strut\smash{\secname}
+        \end{beamercolorbox}%
+        \begin{beamercolorbox}[wd=.33\paperwidth,ht=3.3mm,right,sep=.25mm]%
+            {footline}
+            \strut%
+            \llap{\insertframenumber}/\inserttotalframenumber~
+        \end{beamercolorbox}%
+    }%
+    \vskip0pt%
+}
+
+% titlepage
+\setbeamertemplate{title page}{
+    \setbeamertemplate{headline}{
+        \pgfdeclareimage[height=35mm]{line}{fore5}
+        \pgfuseimage{line}
+    }
+  \vbox{}
+  \vskip2.0em\par
+  \vfill
+  \begin{centering}
+      \begin{beamercolorbox}[sep=8pt,center,rounded=false,shadow=true]{title}
+          \usebeamerfont{title}\Huge\inserttitle\par
+          \ifx\insertsubtitle\@empty%
+          \else%
+          \vskip1.00em%
+          {\usebeamerfont{subtitle}\usebeamercolor[fg]{subtitle}\insertsubtitle\par}%
+          \fi%
+      \end{beamercolorbox}
+      \vskip2.0em\par
+      \begin{beamercolorbox}[sep=8pt,center]{author}
+          \usebeamerfont{author}\insertauthor
+      \end{beamercolorbox}
+      \begin{beamercolorbox}[sep=8pt,center]{date}
+          \usebeamerfont{date}\insertdate
+      \end{beamercolorbox}
+      \vskip4.0em%
+  \end{centering}
+  \vfill
+  \setbeamertemplate{footline}{}
+  \setbeamertemplate{headline}{
+      \pgfdeclareimage[height=35mm]{line}{fore56}
+      \pgfuseimage{line}
+  }
+}

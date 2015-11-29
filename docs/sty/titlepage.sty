@@ -1,0 +1,57 @@
+\newcommand*{\ps@uibkfront}{
+    \let\@mkboth\@gobbletwo
+    \let\sectionmark\@gobble
+    \let\subsectionmark\@gobble
+    \def\@oddhead{
+        \vspace{4mm}
+        \includegraphics[height=6cm]{uibk_logo.pdf}
+        \hfill
+        \vbox to 6cm{
+            \vspace{4mm}
+            \llap{\@uibkLARGE University of Innsbruck}
+            \vfill
+            \llap{\@uibkLarge Institut of Computer Science}
+            \vspace{4mm}
+            \llap{\@uibkLarge Research Group X}
+        }
+    }
+    \let\@evenhead\@empty
+    \let\@oddfoot\@empty
+    \let\@evenfoot\@empty
+}
+
+\renewcommand{\maketitle}{
+    \pagestyle{empty}
+    \thispagestyle{uibkfront} {
+        \raggedleft
+        \null
+        \vspace*{13cm}
+        {\@uibkLARGE\@title}
+        \\[20mm]
+        {\@uibkLarge\textbf{\@author}}
+        \vfill\hfill
+        {\@uibkLarge\textbf{Term Paper}}
+        \\
+        \medskip
+        {\@uibkLarge\textbf{Supervisor:} Someone}
+        \\
+        {\@uibkLarge\@date}
+        \\
+    }
+    \marginsize{25mm}{25mm}{20mm}{20mm}
+    \pagestyle{plain}
+    \setcounter{footnote}{0}
+    \global\let\thanks\relax
+    \global\let\maketitle\relax
+    \global\let\@thanks\@empty
+    \global\let\@author\@empty
+    \global\let\@date\@empty
+    \global\let\@title\@empty
+    \global\let\title\relax
+    \global\let\author\relax
+    \global\let\date\relax
+    \global\let\and\relax
+    % minted style
+    \usemintedstyle{tango}
+    \newpage
+}
