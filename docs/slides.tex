@@ -7,6 +7,7 @@
 \date{2016-01-15}
 
 \usepackage{multicol}
+\newminted{nasm}{fontsize=\scriptsize,frame=leftline,framesep=2mm,linenos}
 
 \AtBeginSection[] {
     \begin{frame}{Outline}
@@ -34,9 +35,9 @@
             \dots
 
             \begin{description}
-                \item[of them:] They did a great job.
-                \item[of you:] You will see familiar material.
-                \item[of us:] We are lazy.
+                \item<1->[of them:] They did a great job.
+                \item<2->[of you:] You will see familiar material.
+                \item<3->[of us:] We are lazy.
             \end{description}
 
             Check them out at \url{http://rpis.ec/} and
@@ -81,7 +82,7 @@
             \SI{4}{\kibi\byte} typical page size, addresses can be decomposed,
             page pointer + offset:
 
-            \[\mathtt{0xA1B2C3D4} \implies \texttt{0xA1B2C000} + \mathtt{0x3D4}\]
+            $\mathtt{0xA1B2C3D4} \to \texttt{0xA1B2C000} + \mathtt{0x3D4}$
         \end{column}
         \begin{column}{0.55\textwidth}
             \includegraphics[height=0.7\textheight]{pages}
@@ -106,7 +107,7 @@
             \begin{itemize}
                 \item Pages have permissions \texttt{rwx} (DEP)
                 \item Layout not always the same (ALSR)
-                \item Lot's of pointers
+                \item Lots of pointers
             \end{itemize}
         \end{column}
     \end{columns}
@@ -126,6 +127,8 @@
                     (caller vs.\ callee)
             \end{itemize}
 
+            \pause
+
             Depends on:
 
             \begin{itemize}
@@ -135,25 +138,29 @@
             \end{itemize}
 
         \end{column}
+
+        \pause
+
         \begin{column}{0.5\textwidth}
-            I know, Radu never told you.\dots
+            I know, Radu never told you\dots
 
             \medskip
 
-            \textbf{C Declaration:}
+            \textbf{C Declaration (cdecl):}
 
             \begin{itemize}
                 \item arguments on stack (reverse order)\\
                     aligned to \SI{16}{\byte} boundary
                 \item return via register (\texttt{EAX} / \texttt{ST0})
-                \item return address on stack (old \texttt{IP})
-                \item old base pointer (\texttt{BP})
+                \item return address on stack\\
+                    (old instruction pointer \texttt{IP})
+                \item old base pointer \texttt{BP}
             \end{itemize}
         \end{column}
     \end{columns}
 \end{frame}
 
-\begin{frame}{System Call \& Protection Rings}
+\begin{frame}[fragile]{System Call \& Protection Rings}
     \begin{columns}
         \begin{column}{0.55\textwidth}
             \includegraphics[width=\textwidth]{x86_rings}
@@ -171,16 +178,64 @@
 
             Process uses a \emph{System Call} (own instruction) to notify the
             kernel to take over (context switch).
+
+            \begin{nasmcode*}{autogobble,linenos=false}
+                int   0x80   ; old
+                call  write  ; new, sysenter via VDSO
+            \end{nasmcode*}
         \end{column}
     \end{columns}
+    \sidenote{- Wikipedia}
+\end{frame}
+
+\begin{frame}{System Calls}
+    \includegraphics[width=\textwidth]{systemcalls}
+    \sidenote{- \url{http://syscalls.kernelgrok.com/}}
+\end{frame}
+
+\begin{frame}{Endianness}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{center}
+                \includegraphics[width=0.8\textwidth]{big_endian}
+            \end{center}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{center}
+                \includegraphics[width=0.8\textwidth]{little_endian}
+            \end{center}
+        \end{column}
+    \end{columns}
+    \sidenote{- Wikipedia}
 \end{frame}
 
 \section{Exploit printf}
 
 \section{Buffer Overflow}
 
-\begin{frame}{Smash or Corrupt}
-
+\begin{frame}[fragile]{Smash or Corrupt}
+    \begin{tabular}{p{0.5\textwidth} l}
+        \begin{minipage}{0.5\textwidth}
+            \begin{ccode*}{autogobble,linenos=false}
+                static char buffer[64];
+            \end{ccode*}
+        \end{minipage}
+        & static memory corruption \bigskip\\
+        \begin{minipage}{0.5\textwidth}
+            \begin{ccode*}{autogobble,linenos=false}
+                char *buffer = (char *) malloc(64);
+                /* ... */
+                free(buffer);
+            \end{ccode*}
+        \end{minipage}
+        & dynamic memory (heap) corruption \bigskip\\
+        \begin{minipage}{0.5\textwidth}
+            \begin{ccode*}{autogobble,linenos=false}
+                char buffer[64];
+            \end{ccode*}
+        \end{minipage}
+        & stack smashing
+    \end{tabular}
 \end{frame}
 
 \begin{frame}{Overwrite a Flag}

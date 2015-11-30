@@ -9,7 +9,7 @@ all: slides.pdf
 .PHONY: clean
 clean:
 	-$(RM) -r *.aux *.bbl *.blg *.lof *.log *.lol *.lot *.nav *.out *.pdf \
-	          *.snm *.synctex *.toc *.thm *.pyg _minted*
+	          *.pyg *.snm *.synctex *.toc *.thm *.vrb _minted*
 
 %.pdf: %.tex
 	$(TEX) $(TEXFLAGS) $<
