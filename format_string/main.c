@@ -10,7 +10,6 @@ int main(int argc, char *argv[]) {
     if (strncmp(buf, passwd, 100) == 0) {
         printf("correct\n");
     } else {
-        printf("passwd: %s\n", passwd);
         printf("You entered:\n");
         printf(buf);
         printf("\n");
