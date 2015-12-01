@@ -232,12 +232,12 @@
             \end{pre*}
             \bigskip\pause
             \begin{pre*} {autogobble}
-                ~> echo '%08lx' | ./main
+                ~> echo '%08x' | ./main
                 You entered:
-                7f380651f000
+                bfd98ed4
             \end{pre*}
             \medskip
-            looks like a pointer, remember this for later.
+            oh look, a pointer, this may come in handy
         \end{column}
     \end{columns}
 \end{frame}
@@ -334,6 +334,7 @@
     \begin{itemize}
         \item We cannot bend the return address to the buffer anymore
         \item What now?
+        \bigskip
         \pause
         \item Take control!
     \end{itemize}

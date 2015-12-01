@@ -1,4 +1,4 @@
 #!/bin/bash
 
 make main
-python -c 'print "%08lx." * 9' | ./main
+python -c 'print "%08x." * 10' | ./main
