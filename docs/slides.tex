@@ -21,11 +21,11 @@
 
 \maketitle
 
-% \begin{frame}{Outline}
-%     \begin{multicols}{2}
-%         \tableofcontents
-%     \end{multicols}
-% \end{frame}
+\begin{frame}{Outline}
+    \begin{multicols}{2}
+        \tableofcontents
+    \end{multicols}
+\end{frame}
 
 \begin{frame}{Acknowledgement}
     \begin{columns}
@@ -54,7 +54,7 @@
 \begin{frame}{Why?}
     \begin{itemize}
         \item It's simpler, yet not overly simplified.
-        \item People call it \emph{more academic} *sigh*
+        \item People call it \emph{more academic} \quad *sigh*
         \item Most techniques can be translated easily.
         \item Most material covers x86.
     \end{itemize}
@@ -412,7 +412,7 @@
 \begin{frame}{About ARM}
     \begin{itemize}
         \item used in \emph{low power} devices
-        \item smaller number of registers
+        \item smaller number of registers (though \SI{32}{\bit})
         \item calling convention similar to fastcall (\texttt{r0}, \texttt{r1},
             \texttt{r2}, \texttt{r3})
         \item instructions can work on multiple registers at once
@@ -424,6 +424,53 @@
 \section{Fuzzing}
 
 \section{Polymorphic Code}
+
+\begin{frame}{Polymorphism}
+    \begin{center}
+        \includegraphics[height=0.7\textheight]{polymorphism}
+    \end{center}
+    \sidenote{\url{ntu.edu.sg}}
+\end{frame}
+
+\begin{frame}{\st{Polymorphism} Polymorphic Code}
+    \begin{itemize}
+        \item code which \emph{evolves} during runtime
+        \item often malicious code, but also used in DRM
+        \item makes use of encryption
+        \medskip
+        \pause
+        \item makes static analysis hard, you basically need to reverse
+            engineer the system,\\
+            running it may not reveal all parts or be straight up lethal!
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{\st{Polymorphism} Polymorphic Code}
+    \begin{itemize}
+        \item malicious parts sometimes only triggered when special conditions
+            are met (time, platform, events, \dots)
+        \medskip
+        \pause
+        \item \textbf{metamorphic engines} are used to generated new code\\
+            little documentation / public knowledge\\
+            some even see it as taboo
+        \medskip
+        \pause
+        \item have a look at \url{http://z0mbie.daemonlab.org/}\\
+            and \url{http://vxheaven.org/lib/vmd01.html}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[t,fragile]{Hijack Example (last year)}
+    \begin{columns}
+        \begin{column}{0.75\textwidth}
+            \cfile[xleftmargin=0.8cm,firstline=8,lastline=26]{../hijack/main.c}
+        \end{column}
+        \begin{column}{0.25\textwidth}
+            \cfile[xleftmargin=0.8cm,firstline=28,lastline=42]{../hijack/main.c}
+        \end{column}
+    \end{columns}
+\end{frame}
 
 \section*{Conclusion}
 
