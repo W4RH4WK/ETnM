@@ -67,6 +67,13 @@
     \sidenote{- Wikipedia}
 \end{frame}
 
+\begin{frame}{Registers}
+    \begin{center}
+        \includegraphics[height=0.5\textheight]{single_register}
+    \end{center}
+    \sidenote{- \url{http://nullprogram.com/}}
+\end{frame}
+
 \begin{frame}{Memory Management}
     \begin{columns}
         \begin{column}{0.45\textwidth}
@@ -250,27 +257,7 @@
 
 \section{Buffer Overflow}
 
-\begin{frame}{Smashing the Stack}
-    \begin{columns}
-        \begin{column}{0.5\textwidth}
-            \begin{center}
-                \includegraphics[width=0.75\textwidth]{stack_smash}
-            \end{center}
-        \end{column}
-        \begin{column}{0.5\textwidth}
-            \begin{itemize}
-                \item Here, you write from top to bottom \bigskip
-                \item You'll first overwrite local variables (\texttt{bar}) \bigskip
-                \item Followed by arguments \bigskip
-                \item Your \textbf{saved return address} \bigskip
-                \item The next frame
-            \end{itemize}
-        \end{column}
-    \end{columns}
-    \sidenote{- Wikipedia}
-\end{frame}
-
-\begin{frame}[fragile]{Other variants}
+\begin{frame}[fragile]{Variants}
     \begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
         static memory corruption: &
         \begin{ccode*}{autogobble,linenos=false}
@@ -289,6 +276,26 @@
             char buffer[64];
         \end{ccode*}
     \end{tabular}
+\end{frame}
+
+\begin{frame}{Smashing the Stack}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{center}
+                \includegraphics[width=0.75\textwidth]{stack_smash}
+            \end{center}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{itemize}
+                \item Here, you write from top to bottom \bigskip
+                \item You'll first overwrite local variables (\texttt{bar}) \bigskip
+                \item Followed by arguments \bigskip
+                \item Your \textbf{saved return address} \bigskip
+                \item The next frame
+            \end{itemize}
+        \end{column}
+    \end{columns}
+    \sidenote{- Wikipedia}
 \end{frame}
 
 \begin{frame}{Overwrite a Flag}
@@ -332,7 +339,7 @@
 
 \begin{frame}{Data Execution Prevention}
     \begin{itemize}
-        \item We cannot bend the return address to the buffer anymore
+        \item We cannot bend the return address to the buffer anymore =(
         \item What now?
         \bigskip
         \pause
@@ -340,7 +347,7 @@
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Return to a different function}
+\begin{frame}{Return to a Different Function}
     \begin{center}
         \huge Demonstration
     \end{center}
