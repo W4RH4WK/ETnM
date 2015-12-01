@@ -54,6 +54,7 @@
 \begin{frame}{Why?}
     \begin{itemize}
         \item It's simpler, yet not overly simplified.
+        \item People call it \emph{more academic} *sigh*
         \item Most techniques can be translated easily.
         \item Most material covers x86.
     \end{itemize}
@@ -155,6 +156,7 @@
                 \item return address on stack\\
                     (old instruction pointer \texttt{IP})
                 \item old base pointer \texttt{BP}
+                \item caller does the cleanup
             \end{itemize}
         \end{column}
     \end{columns}
@@ -362,6 +364,62 @@
 \section{Code Pointer Integrity}
 
 \section{ARM and x86\_64}
+
+\begin{frame}{Modern Devices}
+    Your laptop, your server:
+    \begin{itemize}
+        \item likely x86\_64
+    \end{itemize}
+    \medskip
+    \pause
+    Your phone, your tablet, maybe even your watch:
+    \begin{itemize}
+        \item probably ARM
+    \end{itemize}
+    \medskip
+    \pause
+    Your router:
+    \begin{itemize}
+        \item probably MIPS
+        \item maybe ARM somewhere in the future
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{About x86}
+    \begin{itemize}
+        \item no instruction alignment (great for ROP Gadgets)
+        \item lot of instructions
+        \item instruction length varies (\SIrange{1}{15}{\byte})
+        \item \texttt{mov} is Turing Complete
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{About x64\_64}
+    \begin{itemize}
+        \item successor to x86
+        \item also known as x64 or AMD64
+        \item using fastcall calling convention
+            \begin{itemize}
+                \item some arguments put into registers (\texttt{RDI},
+                    \texttt{RSI}, \texttt{RDX}, \texttt{RCX}, \texttt{R8},
+                    \texttt{R9})
+                \item this makes ROP much easier
+            \end{itemize}
+        \item more entropy for ALSR (hard bruteforce)\
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{About ARM}
+    \begin{itemize}
+        \item used in \emph{low power} devices
+        \item smaller number of registers
+        \item calling convention similar to fastcall (\texttt{r0}, \texttt{r1},
+            \texttt{r2}, \texttt{r3})
+        \item instructions can work on multiple registers at once
+        \item special \SI{16}{\bit} mode (\textbf{THUMB})
+        \item cache not flushed automatically
+    \end{itemize}
+\end{frame}
 
 \section{Fuzzing}
 
