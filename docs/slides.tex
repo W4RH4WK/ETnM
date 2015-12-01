@@ -234,6 +234,8 @@
                 You entered:
                 7f380651f000
             \end{pre*}
+            \medskip
+            looks like a pointer, remember this for later.
         \end{column}
     \end{columns}
 \end{frame}
@@ -245,27 +247,6 @@
 \end{frame}
 
 \section{Buffer Overflow}
-
-\begin{frame}[fragile]{Smash or Corrupt}
-    \begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
-        static memory corruption: &
-        \begin{ccode*}{autogobble,linenos=false}
-            static char buffer[64];
-        \end{ccode*}
-        \bigskip\\
-        dynamic memory (heap) corruption: &
-        \begin{ccode*}{autogobble,linenos=false}
-            char *buffer = (char *) malloc(64);
-            /* ... */
-            free(buffer);
-        \end{ccode*}
-        \bigskip\\
-        stack smashing: &
-        \begin{ccode*}{autogobble,linenos=false}
-            char buffer[64];
-        \end{ccode*}
-    \end{tabular}
-\end{frame}
 
 \begin{frame}{Smashing the Stack}
     \begin{columns}
@@ -287,13 +268,28 @@
     \sidenote{- Wikipedia}
 \end{frame}
 
-\begin{frame}{Overwrite a Flag}
-    \begin{center}
-        \huge Demonstration
-    \end{center}
+\begin{frame}[fragile]{Other variants}
+    \begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
+        static memory corruption: &
+        \begin{ccode*}{autogobble,linenos=false}
+            static char buffer[64];
+        \end{ccode*}
+        \bigskip\\
+        dynamic memory (heap) corruption: &
+        \begin{ccode*}{autogobble,linenos=false}
+            char *buffer = (char *) malloc(64);
+            /* ... */
+            free(buffer);
+        \end{ccode*}
+        \bigskip\\
+        stack smashing: &
+        \begin{ccode*}{autogobble,linenos=false}
+            char buffer[64];
+        \end{ccode*}
+    \end{tabular}
 \end{frame}
 
-\begin{frame}{Overwrite the Stored Return Address}
+\begin{frame}{Overwrite a Flag}
     \begin{center}
         \huge Demonstration
     \end{center}
@@ -301,9 +297,57 @@
 
 \section{Shell Code}
 
+\begin{frame}{Bend Return Address to jump into buffer}
+    \begin{center}
+        \huge Demonstration
+    \end{center}
+\end{frame}
+
 \section{Data Execution Prevention (DEP)}
 
+\begin{frame}{Data Execution Prevention}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{center}
+                \includegraphics[width=0.9\textwidth]{dep_windows}
+            \end{center}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{itemize}
+                \item also known as \textbf{write XOR execute} (\texttt{w\^{}x})
+                \medskip
+                \item sometimes called \textbf{page protection}
+                \bigskip
+                \item typically enforced by hardware
+                \medskip
+                \item \texttt{rwx} permissions per memory page
+                \medskip
+                \item \texttt{segfault} is triggered upon violation
+            \end{itemize}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Data Execution Prevention}
+    \begin{itemize}
+        \item We cannot bend the return address to the buffer anymore
+        \item What now?
+        \pause
+        \item Take control!
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Return to a different function}
+    \begin{center}
+        \huge Demonstration
+    \end{center}
+\end{frame}
+
 \section{Return Oriented Programming (ROP)}
+
+\begin{frame}{Gadgets}
+
+\end{frame}
 
 \begin{frame}{Return to libC}
 
