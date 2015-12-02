@@ -58,6 +58,8 @@
         \item Most techniques can be translated easily.
         \item Most material covers x86.
     \end{itemize}
+    \bigskip
+    We are using Ubuntu 15.10 x86 inside VirtualBox here.
 \end{frame}
 
 \begin{frame}{Registers}
@@ -189,8 +191,8 @@
             kernel to take over (context switch).
 
             \begin{nasmcode*}{autogobble,linenos=false}
-                int   0x80   ; old
-                call  write  ; new, sysenter via VDSO
+                int   0x80   ; old, but still works
+                call  write  ; new: sysenter via VDSO
             \end{nasmcode*}
         \end{column}
     \end{columns}
@@ -306,7 +308,7 @@
 
 \section{Shell Code}
 
-\begin{frame}{Bend Return Address to jump into buffer}
+\begin{frame}{Bend Return Address to jump into Buffer}
     \begin{center}
         \huge Demonstration
     \end{center}
@@ -338,6 +340,12 @@
 \end{frame}
 
 \begin{frame}{Data Execution Prevention}
+    \begin{block}{Famous Quote}
+        If your program simply segfaulted, consider yourself lucky.
+    \end{block}
+\end{frame}
+
+\begin{frame}{Data Execution Prevention}
     \begin{itemize}
         \item We cannot bend the return address to the buffer anymore =(
         \item What now?
@@ -364,6 +372,49 @@
 \end{frame}
 
 \section{Address Space Layout Randomization (ASLR)}
+
+\begin{frame}[fragile]{\texttt{/proc/self/maps}}
+    \begin{pre*}{autogobble}
+        ~> cat /proc/self/maps
+        00400000-0040b000 r-xp 00000000 fc:01 1836175                            /bin/cat
+        0060b000-0060c000 r--p 0000b000 fc:01 1836175                            /bin/cat
+        0060c000-0060d000 rw-p 0000c000 fc:01 1836175                            /bin/cat
+        00904000-00925000 rw-p 00000000 00:00 0                                  [heap]
+        7fe33f33b000-7fe33f4fb000 r-xp 00000000 fc:01 5767649                    /lib/x86_64-linux-gnu/libc-2.21.so
+        7ffc2bb0f000-7ffc2bb30000 rw-p 00000000 00:00 0                          [stack]
+        7ffc2bb70000-7ffc2bb72000 r-xp 00000000 00:00 0                          [vdso]
+    \end{pre*}
+    \bigskip
+    some lines have been omitted
+\end{frame}
+\begin{frame}[fragile]{\texttt{/proc/self/maps}}
+    \begin{pre*}{autogobble}
+        ~> cat /proc/self/maps
+        00400000-0040b000 r-xp 00000000 fc:01 1836175                            /bin/cat
+        0060b000-0060c000 r--p 0000b000 fc:01 1836175                            /bin/cat
+        0060c000-0060d000 rw-p 0000c000 fc:01 1836175                            /bin/cat
+        0240d000-0242e000 rw-p 00000000 00:00 0                                  [heap]
+        7f3392f04000-7f33930c4000 r-xp 00000000 fc:01 5767649                    /lib/x86_64-linux-gnu/libc-2.21.so
+        7ffdbee06000-7ffdbee27000 rw-p 00000000 00:00 0                          [stack]
+        7ffdbeff5000-7ffdbeff7000 r-xp 00000000 00:00 0                          [vdso]
+    \end{pre*}
+    \bigskip
+    some lines have been omitted
+\end{frame}
+\begin{frame}[fragile]{\texttt{/proc/self/maps}}
+    \begin{pre*}{autogobble}
+        ~> cat /proc/self/maps
+        00400000-0040b000 r-xp 00000000 fc:01 1836175                            /bin/cat
+        0060b000-0060c000 r--p 0000b000 fc:01 1836175                            /bin/cat
+        0060c000-0060d000 rw-p 0000c000 fc:01 1836175                            /bin/cat
+        00bd4000-00bf5000 rw-p 00000000 00:00 0                                  [heap]
+        7f3f4ad4e000-7f3f4af0e000 r-xp 00000000 fc:01 5767649                    /lib/x86_64-linux-gnu/libc-2.21.so
+        7fffc470e000-7fffc472f000 rw-p 00000000 00:00 0                          [stack]
+        7fffc4766000-7fffc4768000 r-xp 00000000 00:00 0                          [vdso]
+    \end{pre*}
+    \bigskip
+    some lines have been omitted
+\end{frame}
 
 \section{Heap Corruption}
 
@@ -437,7 +488,7 @@
     \begin{center}
         \includegraphics[height=0.7\textheight]{polymorphism}
     \end{center}
-    \sidenote{\url{ntu.edu.sg}}
+    \sidenote{\url{- ntu.edu.sg}}
 \end{frame}
 
 \begin{frame}{\st{Polymorphism} Polymorphic Code}
@@ -482,7 +533,7 @@
 
 \section*{Conclusion}
 
-\begin{frame}{Fin}
+\begin{frame}{Fin.}
    \begin{center}
        \huge OMG finally\dots
    \end{center}
