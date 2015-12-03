@@ -257,6 +257,16 @@
     \end{center}
 \end{frame}
 
+\begin{frame}{Death by \texttt{printf}}
+    \begin{itemize}
+        \item Even functions which look very simple / basic can be exploited
+        \medskip
+        \item \texttt{printf} also allows you to \textbf{write} to memory
+        \medskip
+        \item RTFM
+    \end{itemize}
+\end{frame}
+
 \section{Buffer Overflow}
 
 \begin{frame}[fragile]{Variants}
@@ -418,11 +428,11 @@
 
 \section{Heap Corruption}
 
-\section{Stack Cookies}
+\section{Stack Cookies (Canary)}
 
 \section{Code Pointer Integrity}
 
-\section{ARM and x86\_64}
+\section{A Word about x86\_64 and ARM}
 
 \begin{frame}{Modern Devices}
     Your laptop, your server:
