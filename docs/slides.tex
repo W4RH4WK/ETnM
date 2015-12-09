@@ -428,6 +428,48 @@
 
 \section{Heap Corruption}
 
+\begin{frame}{Heap vs. Stack}
+    \begin{itemize}
+        \item Managed by the programmer through \texttt{malloc} /
+            \texttt{calloc} / \texttt{recalloc} / \texttt{free}
+        \medskip
+        \item Mainly used for structs (objects), big buffers, persistent data
+        \medskip
+        \item \textbf{non-linear} structure
+        \medskip
+        \item Many different implementations (dlmalloc, ptmalloc, \dots)\\
+            some applications come with their own implementation
+        \medskip
+        \item Details depend \emph{heavily} on implementation
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Overflow}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{center}
+                \includegraphics[height=0.9\textheight]{heap_segment}
+            \end{center}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{center}
+                \includegraphics[height=0.9\textheight]{heap_overflow}
+            \end{center}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Attack Surface}
+    \begin{itemize}
+        \item Anything that handles the now corrupted data can be viewed as
+            additional attack surface
+        \medskip
+        \pause
+        \item Structs commonly contain function pointers which can be
+            overwritten
+    \end{itemize}
+\end{frame}
+
 \section{Stack Cookies (Canary)}
 
 \section{Code Pointer Integrity}
@@ -520,8 +562,8 @@
             are met (time, platform, events, \dots)
         \medskip
         \pause
-        \item \textbf{metamorphic engines} are used to generated new code\\
-            little documentation / public knowledge\\
+        \item \textbf{metamorphic engines} are used to generated new code;\\
+            little documentation / public knowledge;\\
             some even see it as taboo
         \medskip
         \pause
@@ -547,6 +589,26 @@
    \begin{center}
        \huge OMG finally\dots
    \end{center}
+\end{frame}
+
+\begin{frame}{``But I use Java!''}
+    \begin{center}
+        \includegraphics[height=0.9\textheight]{jvm_ram}
+    \end{center}
+    \sidenote{- \url{http://twitter.com/java_monitor}}
+\end{frame}
+
+\begin{frame}{``But I use Java!''}
+    Don't worry, we got you covered.
+
+    \bigskip
+
+    There are a lot of different exploits out there, which share a lot of
+    similarities.
+
+    \bigskip
+
+    Have a look at this: \url{http://foxglovesecurity.com/2015/11/06/}
 \end{frame}
 
 \end{document}
