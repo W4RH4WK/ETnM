@@ -260,16 +260,20 @@
 \begin{frame}{Death by \texttt{printf}}
     \begin{itemize}
         \item Even functions which look very simple / basic can be exploited
-        \medskip
-        \item \texttt{printf} also allows you to \textbf{write} to memory
-        \medskip
+        \bigskip
         \item RTFM
+        \bigskip
+        \pause
+        \item but it gets better \dots
     \end{itemize}
 \end{frame}
 
 \begin{frame}{\texttt{printf} Oriented Programming}
+    \texttt{printf} is Turing-Complete
+    \bigskip
+
     Brainfuck to \texttt{printf} format string compiler:\\
-    \url{http://github.com/HexHive/printbf}.
+    \url{http://github.com/HexHive/printbf}
 \end{frame}
 
 \section{Buffer Overflow}
@@ -380,7 +384,7 @@
     \sidenote{- \url{https://dhavalkapil.com/blogs/Shellcode-Injection/}}
 \end{frame}
 
-\begin{frame}{Bend Return Address to jump into Buffer}
+\begin{frame}{Bend Return Address into Buffer}
     \begin{center}
         \huge Demonstration
     \end{center}
@@ -439,12 +443,51 @@
 
 \section{Return Oriented Programming (ROP)}
 
-\begin{frame}{Gadgets}
-
+\begin{frame}{Idea}
+    \begin{itemize}
+        \item Target may not have a \texttt{gimmeShellPlz} function.
+        \bigskip
+        \pause
+        \item Create such a function by combining parts (gadgets) of available
+            functions.
+    \end{itemize}
 \end{frame}
 
-\begin{frame}{Return to libC}
-
+\begin{frame}[fragile]{Gadgets}
+    \begin{columns}
+        \begin{column}{0.6\textwidth}
+            \begin{pre*}{autogobble}
+                > objdump -d /lib/i386-linux-gnu/libc.so.6 | grep -B5 ret
+                  ...
+                18f59:       8b 54 24 04             mov    0x4(%esp),%edx
+                18f5d:       83 c4 20                add    $0x20,%esp
+                18f60:       5e                      pop    %esi
+                18f61:       5f                      pop    %edi
+                18f62:       5d                      pop    %ebp
+                18f63:       c3                      ret
+                  ...
+                192d4:       8b 54 24 2c             mov    0x2c(%esp),%edx
+                192d8:       e8 23 fc ff ff          call   18f00 <__floatdidf+0x30>
+                192dd:       8b 44 24 18             mov    0x18(%esp),%eax
+                192e1:       8b 54 24 1c             mov    0x1c(%esp),%edx
+                192e5:       83 c4 24                add    $0x24,%esp
+                192e8:       c3                      ret
+                  ...
+            \end{pre*}
+        \end{column}
+        \begin{column}{0.4\textwidth}
+            \begin{itemize}
+                \item \textbf{Definition:} Sequence of instructions ending with
+                    \texttt{RET}.
+                \bigskip
+                \item Target addresses are provided through the buffer and used
+                    one by one.
+                \bigskip
+                \item We can also use library functions (\textit{ret2libc})
+            \end{itemize}
+        \end{column}
+    \end{columns}
+    \sidenote{- \url{https://crypto.stanford.edu/~blynn/rop/}}
 \end{frame}
 
 \section{Address Space Layout Randomization (ASLR)}
@@ -505,12 +548,13 @@
 
 \begin{frame}{Breaking ASLR}
     \begin{itemize}
-        \item ELF image starts at \texttt{0x00400000} if PIE is not specified
+        \item \texttt{.text} segment starts at \texttt{0x00400000} if PIE is
+            not specified
         \medskip
         \pause
         \item \textbf{Info leak:} if we manage to get pointer from the program
             we can calculate the ASLR offset.\\
-            Remember the first example with \texttt{printf}?!
+            Remember the first example with \texttt{printf}
         \medskip
     \item \textbf{Brute Force:} Guessing may be a viable option on
         \SI{32}{\bit}
@@ -714,7 +758,7 @@
 
     \bigskip
 
-    There are a lot of different exploits out there, which share a lot of
+    There are lots of different exploits out there, which share some
     similarities.
 
     \bigskip
