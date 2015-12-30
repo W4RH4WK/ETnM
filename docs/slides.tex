@@ -81,12 +81,10 @@
         \begin{column}{0.45\textwidth}
             Real memory is managed by your OS kernel, a process sees only
             \textbf{virtual} memory.
-
             \medskip
 
             Memory is segmented (\textbf{pages}), which are handled by hardware
             (\textbf{memory management unit}) and software (kernel).
-
             \medskip
 
             \SI{4}{\kibi\byte} typical page size, addresses can be decomposed,
@@ -110,7 +108,6 @@
         \end{column}
         \begin{column}{0.5\textwidth}
             You know some of this, other talks also focus on this.
-
             \bigskip
 
             We'll see:
@@ -136,7 +133,6 @@
                 \item who cleans afterwards\\
                     (caller vs.\ callee)
             \end{itemize}
-
             \pause
 
             Depends on:
@@ -146,14 +142,10 @@
                 \item your toolchain (language)
                 \item your settings (compiler flags)
             \end{itemize}
-
         \end{column}
-
         \pause
-
         \begin{column}{0.5\textwidth}
             I know, Radu never told you\dots
-
             \medskip
 
             \textbf{C Declaration (cdecl):}
@@ -269,34 +261,62 @@
 \end{frame}
 
 \begin{frame}{\texttt{printf} Oriented Programming}
-    \texttt{printf} is Turing-Complete
-    \bigskip
+    \begin{center}
+        \includegraphics[width=0.8\textwidth]{printbf}
+    \end{center}
 
     Brainfuck to \texttt{printf} format string compiler:\\
     \url{http://github.com/HexHive/printbf}
+    \sidenote{- New memory corruption attacks {[}32c3{]}}
 \end{frame}
 
 \section{Buffer Overflow}
 
 \begin{frame}[fragile]{Variants}
-    \begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
-        static memory corruption: &
-        \begin{ccode*}{autogobble,linenos=false}
-            static char buffer[64];
-        \end{ccode*}
-        \bigskip\\
-        dynamic memory (heap) corruption: &
-        \begin{ccode*}{autogobble,linenos=false}
-            char *buffer = (char *) malloc(64);
-            /* ... */
-            free(buffer);
-        \end{ccode*}
-        \bigskip\\
-        stack smashing: &
-        \begin{ccode*}{autogobble,linenos=false}
-            char buffer[64];
-        \end{ccode*}
-    \end{tabular}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            Static Memory Corruption
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{ccode*}{autogobble,linenos=false}
+                void foo(void) {
+                    static char buffer[64];
+                    /* ... */
+                }
+            \end{ccode*}
+        \end{column}
+    \end{columns}
+    \medskip
+    \pause
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            Dynamic Memory (Heap) Corruption
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{ccode*}{autogobble,linenos=false}
+                void foo(void) {
+                    char *buffer = (char *) malloc(64);
+                    /* ... */
+                    free(buffer);
+                }
+            \end{ccode*}
+        \end{column}
+    \end{columns}
+    \medskip
+    \pause
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            Stack Smashing
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{ccode*}{autogobble,linenos=false}
+                void foo(void) {
+                    char buffer[64];
+                    /* ... */
+                }
+            \end{ccode*}
+        \end{column}
+    \end{columns}
 \end{frame}
 
 \begin{frame}{Smashing the Stack}
@@ -340,6 +360,9 @@
 \begin{frame}[fragile]{Example}
     \begin{columns}
         \begin{column}{0.55\textwidth}
+            \begin{pre*}{autogobble,xleftmargin=1em}
+                > cat shellcode.asm
+            \end{pre*}
             \begin{nasmcode*}{autogobble,xleftmargin=1em}
                 xor     eax, eax    ;Clearing eax register
                 push    eax         ;Pushing NULL bytes
@@ -427,7 +450,7 @@
 
 \begin{frame}{Data Execution Prevention}
     \begin{itemize}
-        \item We cannot bend the return address to the buffer anymore =(
+        \item We cannot execute supplied code anymore =(
         \item What now?
         \bigskip
         \pause
@@ -445,7 +468,7 @@
 
 \begin{frame}{Idea}
     \begin{itemize}
-        \item Target may not have a \texttt{gimmeShellPlz} function.
+        \item Target may not have a \texttt{gimme\_shell\_plz} function.
         \bigskip
         \pause
         \item Create such a function by combining parts (gadgets) of available
@@ -506,13 +529,13 @@
 \begin{frame}[fragile]{\texttt{/proc/self/maps}}
     \begin{pre*}{autogobble}
         ~> cat /proc/self/maps
-        00400000-0040b000 r-xp 00000000 fc:01 1836175                            /bin/cat
-        0060b000-0060c000 r--p 0000b000 fc:01 1836175                            /bin/cat
-        0060c000-0060d000 rw-p 0000c000 fc:01 1836175                            /bin/cat
-        00904000-00925000 rw-p 00000000 00:00 0                                  [heap]
-        7fe33f33b000-7fe33f4fb000 r-xp 00000000 fc:01 5767649                    /lib/x86_64-linux-gnu/libc-2.21.so
-        7ffc2bb0f000-7ffc2bb30000 rw-p 00000000 00:00 0                          [stack]
-        7ffc2bb70000-7ffc2bb72000 r-xp 00000000 00:00 0                          [vdso]
+        08048000-08054000 r-xp 00000000 08:01 131085     /bin/cat
+        08054000-08055000 r--p 0000b000 08:01 131085     /bin/cat
+        08055000-08056000 rw-p 0000c000 08:01 131085     /bin/cat
+        08905000-08926000 rw-p 00000000 00:00 0          [heap]
+        b758d000-b7741000 r-xp 00000000 08:01 917531     /lib/i386-linux-gnu/libc-2.21.so
+        b7752000-b7753000 r-xp 00000000 00:00 0          [vdso]
+        bfb26000-bfb47000 rw-p 00000000 00:00 0          [stack]
     \end{pre*}
     \bigskip
     some lines have been omitted
@@ -520,13 +543,13 @@
 \begin{frame}[fragile]{\texttt{/proc/self/maps}}
     \begin{pre*}{autogobble}
         ~> cat /proc/self/maps
-        00400000-0040b000 r-xp 00000000 fc:01 1836175                            /bin/cat
-        0060b000-0060c000 r--p 0000b000 fc:01 1836175                            /bin/cat
-        0060c000-0060d000 rw-p 0000c000 fc:01 1836175                            /bin/cat
-        0240d000-0242e000 rw-p 00000000 00:00 0                                  [heap]
-        7f3392f04000-7f33930c4000 r-xp 00000000 fc:01 5767649                    /lib/x86_64-linux-gnu/libc-2.21.so
-        7ffdbee06000-7ffdbee27000 rw-p 00000000 00:00 0                          [stack]
-        7ffdbeff5000-7ffdbeff7000 r-xp 00000000 00:00 0                          [vdso]
+        08048000-08054000 r-xp 00000000 08:01 131085     /bin/cat
+        08054000-08055000 r--p 0000b000 08:01 131085     /bin/cat
+        08055000-08056000 rw-p 0000c000 08:01 131085     /bin/cat
+        0954e000-0956f000 rw-p 00000000 00:00 0          [heap]
+        b7595000-b7749000 r-xp 00000000 08:01 917531     /lib/i386-linux-gnu/libc-2.21.so
+        b775a000-b775b000 r-xp 00000000 00:00 0          [vdso]
+        bfbc9000-bfbea000 rw-p 00000000 00:00 0          [stack]
     \end{pre*}
     \bigskip
     some lines have been omitted
@@ -534,13 +557,13 @@
 \begin{frame}[fragile]{\texttt{/proc/self/maps}}
     \begin{pre*}{autogobble}
         ~> cat /proc/self/maps
-        00400000-0040b000 r-xp 00000000 fc:01 1836175                            /bin/cat
-        0060b000-0060c000 r--p 0000b000 fc:01 1836175                            /bin/cat
-        0060c000-0060d000 rw-p 0000c000 fc:01 1836175                            /bin/cat
-        00bd4000-00bf5000 rw-p 00000000 00:00 0                                  [heap]
-        7f3f4ad4e000-7f3f4af0e000 r-xp 00000000 fc:01 5767649                    /lib/x86_64-linux-gnu/libc-2.21.so
-        7fffc470e000-7fffc472f000 rw-p 00000000 00:00 0                          [stack]
-        7fffc4766000-7fffc4768000 r-xp 00000000 00:00 0                          [vdso]
+        08048000-08054000 r-xp 00000000 08:01 131085     /bin/cat
+        08054000-08055000 r--p 0000b000 08:01 131085     /bin/cat
+        08055000-08056000 rw-p 0000c000 08:01 131085     /bin/cat
+        0913e000-0915f000 rw-p 00000000 00:00 0          [heap]
+        b75cc000-b7780000 r-xp 00000000 08:01 917531     /lib/i386-linux-gnu/libc-2.21.so
+        b7791000-b7792000 r-xp 00000000 00:00 0          [vdso]
+        bf8f8000-bf919000 rw-p 00000000 00:00 0          [stack]
     \end{pre*}
     \bigskip
     some lines have been omitted
@@ -570,6 +593,102 @@
     \bigskip
     We now know that \texttt{system} is at:
     \[ \mathtt{0xb7e72280} - \mathtt{0xD0F0} = \mathtt{0xb7e65190} \]
+\end{frame}
+
+\section{Stack Cookies (Canary)}
+
+\begin{frame}{Idea}
+    \begin{itemize}
+        \item Put something between buffer and return address, which guards the
+            return address.
+        \bigskip
+        \pause
+        \item Different types:
+        \begin{description}
+            \item[Terminator canaries] Render \textbf{string operations}
+                useless by placing a terminator (\texttt{null},
+                \texttt{\textbackslash r}, \texttt{\textbackslash n}, -1)
+            \medskip
+            \item [Random canaries] generate a random value, store somewhere
+                \textit{safe}, place on the stack and check before each return
+                whether this value is still the same
+            \medskip
+            \item [Random XOR canaries] Same as above but scrambled to mitigate
+                \textit{read-from-stack}
+        \end{description}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{A look at GCC}
+    \sidenote{- \url{http://0x90.at/post/gdb-stack-script}}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{ccode*}{autogobble,xleftmargin=1em}
+                #include <stdio.h>
+
+                void fun(void) {
+                    char buf[8] = {0};
+                    fgets(buf, 32, stdin);
+                    /* break point */
+                    puts(buf);
+                }
+
+                int main(int argc, char *argv[]) {
+                    fun();
+                    return 0;
+                }
+            \end{ccode*}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \pause
+            \begin{pre*}{autogobble}
+                > gcc -o main main.c
+                > gdb ./main
+                AAAAAAA
+                  ...
+                Breakpoint 1, 0x0000000000400671 in fun ()
+                (gdb) show-stack
+                Stack
+                ------------------------
+                0x00007fffffffe280: 0x0a41414141414141
+                0x00007fffffffe288: 0x4848c5a0bbf40c00 (CANARY)
+                0x00007fffffffe290: 0x00007fffffffe2b0 (Saved RBP)
+                0x00007fffffffe298: 0x00000000004006a4 (Saved RIP)
+                ------------------------
+                Stack Pointer: 0x00007fffffffe280
+                Stack Base:    0x00007fffffffe290
+                Canary:        0x4848c5a0bbf40c00
+                saved RIP:     0x00000000004006a4
+            \end{pre*}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Breaking the canary}
+    \begin{columns}
+        \begin{column}{0.4\textwidth}
+            \begin{center}
+                \includegraphics[width=0.9\textwidth]{workers.png}
+            \end{center}
+        \end{column}
+        \pause
+        \begin{column}{0.6\textwidth}
+            \begin{itemize}
+                \item Server \textbf{forks} multiple times to create workers
+                \item Memory is handled copy-on-write\\
+                    $\implies$ all workers share the same canary
+                \item Server respawns workers if they die
+                \item $\implies$ infinite guesses
+            \end{itemize}
+        \end{column}
+    \end{columns}
+    \bigskip
+    \pause
+    Most of the time you can write byte by byte and the first byte is $0$:
+    \begin{align*}
+        \implies 2^8 \times 3 & = 768  & \text{ guesses at most \SI{32}{\bit}}\\
+        \implies 2^8 \times 7 & = 1792 & \text{ guesses at most \SI{64}{\bit}}
+    \end{align*}
 \end{frame}
 
 \section{Heap Corruption}
@@ -616,8 +735,8 @@
         \bigskip
         \pause
         \item \textbf{Use After Free:} pointer gets still used somewhere after
-            free, pointer target is now attack surface, extremely common
-            complex programs (browsers)
+            \texttt{free}, pointer target is now attack surface, extremely
+            common complex programs (browsers)
         \medskip
         \item \textbf{Heap Spraying:} fill heap with exploitable code, viable
             on \SI{32}{\bit}, not so on \SI{64}{\bit} (\textasciitilde
@@ -625,67 +744,7 @@
     \end{itemize}
 \end{frame}
 
-\section{Stack Cookies (Canary)}
-
-\section{Control Flow Integrity}
-
-\section{A Word about x86\_64 and ARM}
-
-\begin{frame}{Modern Devices}
-    Your laptop, your server:
-    \begin{itemize}
-        \item likely x86\_64
-    \end{itemize}
-    \medskip
-    \pause
-    Your phone, your tablet, maybe even your watch:
-    \begin{itemize}
-        \item probably ARM
-    \end{itemize}
-    \medskip
-    \pause
-    Your router:
-    \begin{itemize}
-        \item probably MIPS
-        \item maybe ARM somewhere in the future
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{About x86}
-    \begin{itemize}
-        \item no instruction alignment (great for ROP Gadgets)
-        \item lot of instructions
-        \item instruction length varies (\SIrange{1}{15}{\byte})
-        \item \texttt{mov} is Turing Complete
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{About x64\_64}
-    \begin{itemize}
-        \item successor to x86
-        \item also known as x64 or AMD64
-        \item using fastcall calling convention
-            \begin{itemize}
-                \item some arguments put into registers (\texttt{RDI},
-                    \texttt{RSI}, \texttt{RDX}, \texttt{RCX}, \texttt{R8},
-                    \texttt{R9})
-                \item this makes ROP much easier
-            \end{itemize}
-        \item more entropy for ASLR (hard to bruteforce)
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{About ARM}
-    \begin{itemize}
-        \item used in \emph{low power} devices
-        \item smaller number of registers (though \SI{32}{\bit})
-        \item calling convention similar to fastcall (\texttt{r0}, \texttt{r1},
-            \texttt{r2}, \texttt{r3})
-        \item instructions can work on multiple registers at once
-        \item special \SI{16}{\bit} mode (\textbf{THUMB})
-        \item cache not flushed automatically
-    \end{itemize}
-\end{frame}
+\section{Control Flow Integrity (CFI)}
 
 \section{Fuzzing}
 
@@ -738,6 +797,64 @@
     \end{columns}
 \end{frame}
 
+\section{A Word about x86\_64 and ARM}
+
+\begin{frame}{Modern Devices}
+    Your laptop, your server:
+    \begin{itemize}
+        \item likely x86\_64
+    \end{itemize}
+    \medskip
+    \pause
+    Your phone, your tablet, maybe even your watch:
+    \begin{itemize}
+        \item probably ARM
+    \end{itemize}
+    \medskip
+    \pause
+    Your router:
+    \begin{itemize}
+        \item probably MIPS
+        \item maybe ARM somewhere in the future
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{About x86}
+    \begin{itemize}
+        \item no instruction alignment (great for ROP Gadgets)
+        \item lot of instructions
+        \item instruction length varies (\SIrange{1}{15}{\byte})
+        \item \texttt{mov} is Turing Complete
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{About x86\_64}
+    \begin{itemize}
+        \item successor to x86
+        \item also known as x64 or AMD64
+        \item fastcall calling convention
+            \begin{itemize}
+                \item first few arguments put into registers (\texttt{RDI},
+                    \texttt{RSI}, \texttt{RDX}, \texttt{RCX}, \texttt{R8},
+                    \texttt{R9})
+                \item this makes ROP much easier
+            \end{itemize}
+        \item more entropy for ASLR (hard to bruteforce)
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{About ARM}
+    \begin{itemize}
+        \item used in \emph{low power} devices
+        \item smaller number of registers (though \SI{32}{\bit})
+        \item calling convention similar to fastcall (\texttt{r0}, \texttt{r1},
+            \texttt{r2}, \texttt{r3})
+        \item instructions can work on multiple registers at once
+        \item special \SI{16}{\bit} mode (\textbf{THUMB})
+        \item cache not flushed automatically
+    \end{itemize}
+\end{frame}
+
 \section*{Conclusion}
 
 \begin{frame}{Fin.}
@@ -755,12 +872,10 @@
 
 \begin{frame}{``But I use Java!''}
     Don't worry, we got you covered.
-
     \bigskip
 
     There are lots of different exploits out there, which share some
     similarities.
-
     \bigskip
 
     Have a look at this: \url{http://foxglovesecurity.com/2015/11/06/}
