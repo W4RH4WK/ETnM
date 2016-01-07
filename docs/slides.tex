@@ -407,6 +407,8 @@
     \sidenote{- \url{https://dhavalkapil.com/blogs/Shellcode-Injection/}}
 \end{frame}
 
+% TODO padding calculation + nop sledge
+
 \begin{frame}{Bend Return Address into Buffer}
     \begin{center}
         \huge Demonstration
@@ -745,6 +747,68 @@
 \end{frame}
 
 \section{Control Flow Integrity (CFI)}
+
+\begin{frame}{Control Flow Graph}
+    \begin{center}
+        \includegraphics[width=\textwidth]{gfx/unraid_part_graph.png}
+    \end{center}
+    \sidenote{- unRAID emhttp inside IDA}
+\end{frame}
+
+\begin{frame}{Control Flow Integrity}
+    \begin{itemize}
+        \item Construct a set for each function $f$ containing all functions
+            where $f$ gets called.
+        \bigskip
+        \item Check call / return destination on each call / return
+        \medskip
+        \item Abort if destination is not an element of the specific set
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Control Flow Bending}
+    \begin{center}
+        \includegraphics[width=\textwidth]{gfx/unraid_part_graph_malloc.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Control Flow Bending}
+    \begin{itemize}
+        \item Control flow graph is heavily connected via common functions,
+                like \texttt{printf}, \texttt{malloc}, \texttt{memcpy}, \dots
+        \medskip
+        \item Such functions make it easy to transition from the attackers
+            entry point to his target location (\texttt{system})
+        \medskip
+        \item Transitions from function to function are valid (with respect to
+            Control Flow Integrity)
+        \medskip
+        \item $\implies$ whole path is malicious
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Stack Integrity}
+    \begin{itemize}
+        \item Place return address on a \textit{shadow stack}
+        \medskip
+        \item \textit{shadow stack} protected by hardware
+        \medskip
+        \item $\implies$ function can only return to its current caller
+        \medskip
+        \item $\implies$ Cannot bend control flow anymore
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Stack Integrity}
+    \begin{itemize}
+        \item Idea: If the program contains a Turing complete
+            \textbf{interpreter}, we can just use it to execute our malicious
+            code.
+        \bigskip
+        \pause
+        \item \texttt{printf} is such an interpreter
+    \end{itemize}
+\end{frame}
 
 \section{Fuzzing}
 
