@@ -625,24 +625,10 @@
     \sidenote{- \url{http://0x90.at/post/gdb-stack-script}}
     \begin{columns}
         \begin{column}{0.5\textwidth}
-            \begin{ccode*}{autogobble,xleftmargin=1em}
-                #include <stdio.h>
-
-                void fun(void) {
-                    char buf[8] = {0};
-                    fgets(buf, 32, stdin);
-                    /* break point */
-                    puts(buf);
-                }
-
-                int main(int argc, char *argv[]) {
-                    fun();
-                    return 0;
-                }
-            \end{ccode*}
+            \cfile[xleftmargin=0.8cm]{../canary/main.c}
         \end{column}
+        \pause
         \begin{column}{0.5\textwidth}
-            \pause
             \begin{pre*}{autogobble}
                 > gcc -o main main.c
                 > gdb ./main
@@ -652,15 +638,15 @@
                 (gdb) show-stack
                 Stack
                 ------------------------
-                0x00007fffffffe280: 0x0a41414141414141
-                0x00007fffffffe288: 0x4848c5a0bbf40c00 (CANARY)
-                0x00007fffffffe290: 0x00007fffffffe2b0 (Saved RBP)
-                0x00007fffffffe298: 0x00000000004006a4 (Saved RIP)
+                0xbffff550: 0x00000003             <-- esp
+                0xbffff554: 0x41414141             <-- buf
+                0xbffff558: 0x0a414141
+                0xbffff55c: 0x17981f00             <-- canary
+                0xbffff560: 0x00000001 (padding)
+                0xbffff564: 0xbffff624 (padding)
+                0xbffff568: 0xbffff578 (Saved RBP) <-- ebp
+                0xbffff56c: 0x0804852a (Saved RIP)
                 ------------------------
-                Stack Pointer: 0x00007fffffffe280
-                Stack Base:    0x00007fffffffe290
-                Canary:        0x4848c5a0bbf40c00
-                saved RIP:     0x00000000004006a4
             \end{pre*}
         \end{column}
     \end{columns}
