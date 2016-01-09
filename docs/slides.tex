@@ -425,10 +425,10 @@
             \medskip
             $\mathit{target} = \frac{\mathrm{length}(\text{NOP Sled})}{2}\ +\ \mathrm{length}(\text{shellcode})\ +\ \#(\texttt{A})\ +\ \texttt{\&RET}$
    \end{itemize}
-   \begin{pre*}{autogobble,xleftmargin=3cm}
-               .------------------------------------------.
-               V                                          |
-       |--- NOP SLED ---|--- SHELL CODE ---|-AAAAAAAAA-|-RET-|
+   \begin{pre*}{autogobble,xleftmargin=2.5cm}
+               .---------------------------------------------.
+               V                                             |
+       |-- NOP SLED --|-- SHELL CODE --|-- AAAAAAAAA --|-- TARGET --|
    \end{pre*}
 \end{frame}
 
