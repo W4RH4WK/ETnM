@@ -418,18 +418,21 @@
         \bigskip
         \item return address will be located after \texttt{buf}\\
             \medskip
-            $\implies$ append \texttt{A}s to our shellcode until we reach the
+            $\implies$ append \texttt{'A'}s to our shellcode until we reach the
             return address
         \bigskip
         \item Aim for the center of the \textit{NOP Sled}\\
             \medskip
             $\mathit{target} = \frac{\mathrm{length}(\text{NOP Sled})}{2}\ +\ \mathrm{length}(\text{shellcode})\ +\ \#(\texttt{A})\ +\ \texttt{\&RET}$
    \end{itemize}
-   \begin{pre*}{autogobble,xleftmargin=2.5cm}
-               .---------------------------------------------.
-               V                                             |
-       |-- NOP SLED --|-- SHELL CODE --|-- AAAAAAAAA --|-- TARGET --|
-   \end{pre*}
+   % \begin{pre*}{autogobble,xleftmargin=2.5cm}
+   %             .---------------------------------------------.
+   %             V                                             |
+   %     |-- NOP SLED --|-- SHELL CODE --|-- AAAAAAAAA --|-- TARGET --|
+   % \end{pre*}
+   \begin{center}
+       \input{gfx/shellcode.tikz}
+   \end{center}
 \end{frame}
 
 \begin{frame}{Inject Shell Code}

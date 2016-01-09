@@ -1,0 +1,32 @@
+\usetikzlibrary{arrows.meta}
+\usetikzlibrary{shapes.multipart}
+
+\tikzstyle{block} = [
+	draw,
+	align=center,
+	rectangle,
+]
+
+\tikzstyle{block split} = [
+	block,
+	rectangle split,
+	rectangle split horizontal,
+	rectangle split part align=base,
+]
+
+\tikzstyle{ptr}=[
+	-{Latex[length=2.7mm]}
+]
+
+\begin{tikzpicture}
+
+\node[block split] (payload) {
+	\nodepart{one}    \texttt{NOP} Sled
+	\nodepart{two}    Shell Code
+	\nodepart{three}  AAA\dots AAA
+	\nodepart{four}   \textit{target}
+};
+
+\draw [ptr] (payload.four south) -- +(0,-0.5) -| (payload.one south);
+
+\end{tikzpicture}
