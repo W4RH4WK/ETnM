@@ -2,7 +2,7 @@
 
 void fun(void) {
     char buf[8] = {0};
-    fgets(buf, 32, stdin);
+    fgets(buf, 256, stdin);
     /* break point */
     puts(buf);
 }

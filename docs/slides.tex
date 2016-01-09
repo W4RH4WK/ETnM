@@ -30,18 +30,19 @@
 \begin{frame}{Acknowledgement}
     \begin{columns}
         \begin{column}{0.5\textwidth}
-            We use a lot from RPISEC, a university course about modern
+            We reuse a lot from RPISEC, a university course about modern
             exploitation at Rensselaer Polytechnic Institute (2015), because
             \dots
 
             \begin{description}
-                \item[of them:] They did a great job.
-                \item[of you:] You will see familiar material.
-                \item[of us:] We are lazy.
+                \item[of them:] They did a great job
+                \item[of you:] You will see familiar material
+                \item[of us:] We are lazy
             \end{description}
 
-            Check them out at \url{http://rpis.ec/} and
-            \url{https://github.com/RPISEC/MBE}.
+            Check them out:\\
+            \url{http://rpis.ec/}\\
+            \url{https://github.com/RPISEC/MBE}
         \end{column}
         \begin{column}{0.5\textwidth}
             \includegraphics[height=0.7\textheight]{ripsec}
@@ -53,13 +54,13 @@
 
 \begin{frame}{Why?}
     \begin{itemize}
-        \item It's simpler, yet not overly simplified.
+        \item It's simpler, yet not overly simplified
         \item People call it \emph{more academic} \quad *sigh*
-        \item Most techniques can be translated easily.
-        \item Most material covers x86.
+        \item Most techniques can be translated easily
+        \item Most material covers x86
     \end{itemize}
     \bigskip
-    We are using Ubuntu 15.10 x86 inside VirtualBox here.
+    We are using Ubuntu 15.10 x86 inside VirtualBox here
 \end{frame}
 
 \begin{frame}{Registers}
@@ -78,23 +79,22 @@
 
 \begin{frame}{Memory Management}
     \begin{columns}
-        \begin{column}{0.45\textwidth}
-            Physical memory is managed by your OS kernel, a process sees only
-            \textbf{virtual} memory.
-            \medskip
-
-            Memory is segmented (\textbf{pages}), which are handled by hardware
-            (\textbf{memory management unit}) and software (kernel).
-            \medskip
-
-            \SI{4}{\kibi\byte} typical page size, addresses can be decomposed
-            in page pointer + offset:
-            \smallskip
-
-            $\mathtt{0xA1B2C3D4} \to \texttt{0xA1B2C000} + \mathtt{0x3D4}$
+        \begin{column}{0.5\textwidth}
+            \begin{itemize}
+                \item Kernel manages physical memory\\
+                    through \textbf{memory management unit} (hardware)
+                \medskip
+                \item Process sees only \textbf{virtual} memory
+                \medskip
+                \item \SI{4}{\kibi\byte} typical page size
+                \medskip
+                \item Addresses can be decomposed (page pointer + offset):\\
+                    \smallskip
+                    $\mathtt{0xA1B2C3D4} \to \texttt{0xA1B2C000} + \mathtt{0x3D4}$
+            \end{itemize}
         \end{column}
-        \begin{column}{0.55\textwidth}
-            \includegraphics[height=0.7\textheight]{pages}
+        \begin{column}{0.5\textwidth}
+            \includegraphics[height=0.65\textheight]{pages}
         \end{column}
     \end{columns}
     \sidenote{- Unix Internals by Uresh Vahalia}
@@ -108,13 +108,13 @@
             \end{center}
         \end{column}
         \begin{column}{0.5\textwidth}
-            You know some of this, other talks also focus on this.
+            You may already know some of this.
             \bigskip
-
             We'll see:
             \begin{itemize}
                 \item Pages have permissions \texttt{rwx} (DEP)
                 \item Layout not always the same (ASLR)
+                \item Stack layout
                 \item Lots of pointers
             \end{itemize}
         \end{column}
@@ -128,21 +128,17 @@
         \end{column}
         \begin{column}{0.45\textwidth}
             Your CPU can switch from a more privileged state to a less
-            privileged one.
-
+            privileged one
             \bigskip
-
             Kernel does not run always, process cannot do everything (enforced
-            by hardware).
-
+            by hardware)
             \bigskip
-
-            Process uses a \emph{System Call} (own instruction) to notify the
-            kernel to take over (context switch).
-
+            Process uses \emph{System Calls} to notify the kernel to take over
+            (context switch)
+            \medskip
             \begin{nasmcode*}{autogobble,linenos=false}
                 int   0x80   ; old, but still works
-                call  write  ; new: sysenter via VDSO
+                call  write  ; new, sysenter via VDSO
             \end{nasmcode*}
         \end{column}
     \end{columns}
@@ -174,43 +170,44 @@
     \begin{columns}
         \begin{column}{0.5\textwidth}
             Defines:
-
             \begin{itemize}
-                \item where to place arguments
-                \item where to place return value
-                \item where to place return address
-                \item who prepares the stack
-                \item who cleans up\\
+                \item Where to place arguments
+                \item Where to place return value
+                \item Where to place return address
+                \item Who prepares the stack
+                \item Who cleans up\\
                     (caller or callee)
             \end{itemize}
             \pause
-
             Depends on:
-
             \begin{itemize}
-                \item your platform
-                \item your toolchain (language)
-                \item your settings (compiler flags)
+                \item Your platform
+                \item Your toolchain (language)
+                \item Your settings (compiler flags)
             \end{itemize}
         \end{column}
         \pause
         \begin{column}{0.5\textwidth}
-            I know, Radu never told you\dots
+            I know, Radu never told you\dots\\
             \medskip
-
             \textbf{C Declaration (cdecl):}
-
             \begin{itemize}
-                \item arguments on stack (reverse order)\\
+                \item Arguments on stack (reverse order)\\
                     stack aligned to \SI{16}{\byte} boundary
-                \item return via register (\texttt{EAX} / \texttt{ST0})
-                \item return address on stack\\
-                    (old instruction pointer \texttt{IP})
-                \item old base pointer \texttt{BP}
-                \item caller does the cleanup
+                \item Return via register (\texttt{EAX} / \texttt{ST0})
+                \item On stack:\\
+                    old instruction pointer (\texttt{IP})\\
+                    old base pointer (\texttt{BP})
+                \item Caller does the cleanup
             \end{itemize}
         \end{column}
     \end{columns}
+\end{frame}
+
+\begin{frame}{Main Assumption}
+   \begin{center}
+       The target binary and libraries are known.
+   \end{center}
 \end{frame}
 
 \section{Exploit printf}
@@ -239,7 +236,7 @@
                 bfd98ed4
             \end{pre*}
             \medskip
-            oh look, a pointer, this may come in handy
+            Oh look, a pointer, this may come in handy
         \end{column}
     \end{columns}
 \end{frame}
@@ -257,7 +254,7 @@
         \item RTFM
         \bigskip
         \pause
-        \item but it gets better \dots
+        \item But it gets better \dots
     \end{itemize}
 \end{frame}
 
@@ -350,11 +347,11 @@
 
 \begin{frame}{Idea}
     \begin{itemize}
-        \item supply executable binary code via buffer
+        \item Supply executable binary code via buffer
         \medskip
-        \item rewrite return address to point into buffer
+        \item Rewrite return address to point into buffer
         \medskip
-        \item binary code opens a shell upon execution
+        \item Binary code opens a shell upon execution
     \end{itemize}
 \end{frame}
 
@@ -416,7 +413,7 @@
             $\implies$ prepend shellcode with \textit{NOP Sled} to improve our
             odds
         \bigskip
-        \item return address will be located after \texttt{buf}\\
+        \item Return address will be located after \texttt{buf}\\
             \medskip
             $\implies$ append \texttt{'A'}s to our shellcode until we reach the
             return address
@@ -425,11 +422,6 @@
             \medskip
             $\mathit{target} = \frac{\mathrm{length}(\text{NOP Sled})}{2}\ +\ \mathrm{length}(\text{shellcode})\ +\ \#(\texttt{A})\ +\ \texttt{\&RET}$
    \end{itemize}
-   % \begin{pre*}{autogobble,xleftmargin=2.5cm}
-   %             .---------------------------------------------.
-   %             V                                             |
-   %     |-- NOP SLED --|-- SHELL CODE --|-- AAAAAAAAA --|-- TARGET --|
-   % \end{pre*}
    \begin{center}
        \input{gfx/shellcode.tikz}
    \end{center}
@@ -451,16 +443,15 @@
             \end{center}
             \medskip
 
-            Have a look at \texttt{VMMap.exe} from Sysinternals Suite --- if
-            you are a Windows guy.
+            Using Windows? Have a look at \texttt{VMMap.exe} from Sysinternals Suite
         \end{column}
         \begin{column}{0.5\textwidth}
             \begin{itemize}
-                \item also known as \textbf{write XOR execute} (\texttt{w\^{}x})
+                \item Also known as \textbf{write XOR execute} (\texttt{w\^{}x})
                 \medskip
-                \item sometimes called \textbf{page protection}
+                \item Sometimes called \textbf{page protection}
                 \bigskip
-                \item typically enforced by hardware
+                \item Typically enforced by hardware
                 \medskip
                 \item \texttt{rwx} permissions per memory page
                 \medskip
@@ -499,8 +490,11 @@
         \item Target may not have a \texttt{gimme\_shell\_plz} function.
         \bigskip
         \pause
-        \item Create such a function by combining parts (gadgets) of available
-            functions.
+        \item Create such a function by combining parts (\textbf{gadgets}) of
+            available functions.
+        \bigskip
+        \item x86 allows us to jump to \emph{any} location (even between
+            instructions)
     \end{itemize}
 \end{frame}
 
@@ -529,10 +523,10 @@
         \begin{column}{0.4\textwidth}
             \begin{itemize}
                 \item \textbf{Definition:} Sequence of instructions ending with
-                    \texttt{RET}.
+                    \texttt{RET}
                 \bigskip
                 \item Target addresses are provided through the buffer and used
-                    one by one.
+                    one by one on \texttt{ret}
                 \bigskip
                 \item We can also use library functions (\textit{ret2libc})
             \end{itemize}
@@ -544,14 +538,13 @@
 \section{Address Space Layout Randomization (ASLR)}
 
 \begin{frame}{Idea}
-    Randomize the location of (some) segments every time the program is run.
-    \medskip
-
-    Program must be compiled with \texttt{-pie -fPIE} (Position Independent
-    Code).
-    \medskip
-
-    Only really useful in combination with DEP.
+    \begin{itemize}
+        \item Randomize the location of (some) segments every time the program
+            is run
+        \bigskip
+        \pause
+        \item Return oriented programming cannot be used reliably anymore
+    \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]{\texttt{/proc/self/maps}}
@@ -599,26 +592,28 @@
 
 \begin{frame}{Breaking ASLR}
     \begin{itemize}
-        \item \texttt{.text} segment starts at \texttt{0x00400000} if PIE is
-            not specified
+        \item \texttt{.text} segment starts at \texttt{0x00400000} if not
+            compiled with PIE (position independent executable)
         \medskip
         \pause
-        \item \textbf{Info leak:} if we manage to get pointer from the program
-            we can calculate the ASLR offset.\\
-            Remember the first example with \texttt{printf}
+        \item \textbf{Info leak:} If we manage to get pointer from the program
+            we can calculate the ASLR offset, Remember the first example with
+            \texttt{printf}
         \medskip
-    \item \textbf{Brute Force:} Guessing may be a viable option on
-        \SI{32}{\bit}
+        \item \textbf{Brute Force:} Guessing may be a viable option on
+            \SI{32}{\bit}
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Info Leak}
-    Lets say you have leaked a pointer to \texttt{printf}, \texttt{printf} is
-    at  \texttt{0xb7e72280}.
+\begin{frame}{Info Leak Example}
+    Lets say you managed to leak a pointer (\texttt{0xb7e72280}) and you know
+    that this one usually points to \texttt{printf}.
     \bigskip
-    Look how far away \texttt{system} is from \texttt{printf}, it's
-    \texttt{0xD0F0} bytes.
+
+    Look how far away \texttt{system} is from \texttt{printf}, in the standard
+    library. It's \texttt{0xD0F0} bytes.
     \bigskip
+
     We now know that \texttt{system} is at:
     \[ \mathtt{0xb7e72280} - \mathtt{0xD0F0} = \mathtt{0xb7e65190} \]
 \end{frame}
@@ -626,25 +621,23 @@
 \section{Stack Cookies (Canary)}
 
 \begin{frame}{Idea}
-    \begin{itemize}
-        \item Put something between buffer and return address, which guards the
-            return address.
-        \bigskip
-        \pause
-        \item Different types:
-        \begin{description}
-            \item[Terminator canaries] Render \textbf{string operations}
-                useless by placing a terminator (\texttt{null},
-                \texttt{\textbackslash r}, \texttt{\textbackslash n}, -1)
-            \medskip
-            \item [Random canaries] generate a random value, store somewhere
-                \textit{safe}, place on the stack and check before each return
-                whether this value is still the same
-            \medskip
-            \item [Random XOR canaries] Same as above but scrambled to mitigate
-                \textit{read-from-stack}
-        \end{description}
-    \end{itemize}
+    Put something between buffer and return address, which guards the return
+    address
+    \bigskip
+    \pause
+    \begin{description}
+        \item[Terminator canaries:] Render \textbf{string operations}
+            useless by placing a terminator (\texttt{null},
+            \texttt{\textbackslash r}, \texttt{\textbackslash n},
+            \texttt{-1}) before return address
+        \medskip
+        \item [Random canaries:] Generate a random value, store somewhere
+            \textit{safe}, place on the stack and check before each return
+            whether this value is still the same
+        \medskip
+        \item [Random XOR canaries:] Same as above but scrambled to mitigate
+            \textit{read-from-stack}
+    \end{description}
 \end{frame}
 
 \begin{frame}[fragile]{A look at GCC}
@@ -652,11 +645,16 @@
     \begin{columns}
         \begin{column}{0.5\textwidth}
             \cfile[xleftmargin=0.8cm]{../canary/main.c}
+            \begin{pre*}{autogobble,xleftmargin=0.8cm}
+                > gcc --version
+                gcc (Ubuntu 5.2.1-22ubuntu2) 5.2.1 20151010
+                  ...
+                > gcc -g -o main main.c
+            \end{pre*}
         \end{column}
         \pause
         \begin{column}{0.5\textwidth}
             \begin{pre*}{autogobble}
-                > gcc -o main main.c
                 > gdb ./main
                 AAAAAAA
                   ...
@@ -682,7 +680,7 @@
     \begin{columns}
         \begin{column}{0.4\textwidth}
             \begin{center}
-                \includegraphics[width=0.9\textwidth]{workers.png}
+                \includegraphics[width=1.1\textwidth]{workers.png}
             \end{center}
         \end{column}
         \pause
@@ -748,11 +746,11 @@
             overwritten
         \bigskip
         \pause
-        \item \textbf{Use After Free:} pointer gets still used somewhere after
+        \item \textbf{Use After Free:} Pointer gets still used somewhere after
             \texttt{free}, pointer target is now attack surface, extremely
             common complex programs (browsers)
         \medskip
-        \item \textbf{Heap Spraying:} fill heap with exploitable code, viable
+        \item \textbf{Heap Spraying:} Fill heap with exploitable code, viable
             on \SI{32}{\bit}, not so on \SI{64}{\bit} (\textasciitilde
             \SI{18446744}{\tera\byte})
     \end{itemize}
@@ -770,9 +768,9 @@
 \begin{frame}{Control Flow Integrity}
     \begin{itemize}
         \item Construct a set for each function $f$ containing all functions
-            where $f$ gets called.
+            where $f$ gets called
         \bigskip
-        \item Check call / return destination on each call / return
+        \item Check actual return destination against this set
         \medskip
         \item Abort if destination is not an element of the specific set
     \end{itemize}
@@ -782,6 +780,7 @@
     \begin{center}
         \includegraphics[width=\textwidth]{gfx/unraid_part_graph_malloc.png}
     \end{center}
+    \sidenote{- unRAID emhttp inside IDA}
 \end{frame}
 
 \begin{frame}{Control Flow Bending}
@@ -805,13 +804,13 @@
         \medskip
         \item \textit{shadow stack} protected by hardware
         \medskip
-        \item $\implies$ function can only return to its current caller
+        \item $\implies$ Function can only return to its current caller
         \medskip
         \item $\implies$ Cannot bend control flow anymore
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Stack Integrity}
+\begin{frame}{Breaking Stack Integrity}
     \begin{itemize}
         \item Idea: If the program contains a Turing complete
             \textbf{interpreter}, we can just use it to execute our malicious
@@ -824,7 +823,7 @@
 
 \begin{frame}{Outlook}
     \begin{center}
-        Code Pointer Integrity (Volodymyr Kuznetsov \textit{et al.})
+        Code Pointer Integrity \quad (Volodymyr Kuznetsov \textit{et al.})
     \end{center}
 \end{frame}
 
@@ -903,37 +902,37 @@
 
 \begin{frame}{About x86}
     \begin{itemize}
-        \item no instruction alignment (great for ROP Gadgets)
-        \item lot of instructions
-        \item instruction length varies (\SIrange{1}{15}{\byte})
+        \item No instruction alignment (great for ROP Gadgets)
+        \item Lot of instructions
+        \item Instruction length varies (\SIrange{1}{15}{\byte})
         \item \texttt{mov} is Turing Complete
     \end{itemize}
 \end{frame}
 
 \begin{frame}{About x86\_64}
     \begin{itemize}
-        \item successor to x86
-        \item also known as x64 or AMD64
-        \item fastcall calling convention
+        \item Successor to x86
+        \item Also known as x64 or AMD64
+        \item Fastcall calling convention
             \begin{itemize}
                 \item first few arguments put into registers (\texttt{RDI},
                     \texttt{RSI}, \texttt{RDX}, \texttt{RCX}, \texttt{R8},
                     \texttt{R9})
                 \item this makes ROP much easier
             \end{itemize}
-        \item more entropy for ASLR (hard to bruteforce)
+        \item More entropy for ASLR (hard to bruteforce)
     \end{itemize}
 \end{frame}
 
 \begin{frame}{About ARM}
     \begin{itemize}
-        \item used in \emph{low power} devices
-        \item smaller number of registers (though \SI{32}{\bit})
-        \item calling convention similar to fastcall (\texttt{r0}, \texttt{r1},
+        \item Used in \emph{low power} devices
+        \item Smaller number of registers (though \SI{32}{\bit})
+        \item Calling convention similar to fastcall (\texttt{r0}, \texttt{r1},
             \texttt{r2}, \texttt{r3})
-        \item instructions can work on multiple registers at once
-        \item special \SI{16}{\bit} mode (\textbf{THUMB})
-        \item cache not flushed automatically
+        \item Instructions can work on multiple registers at once
+        \item Special \SI{16}{\bit} mode (\textbf{THUMB})
+        \item Cache not flushed automatically
     \end{itemize}
 \end{frame}
 
