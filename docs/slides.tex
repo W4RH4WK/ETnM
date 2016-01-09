@@ -79,7 +79,7 @@
 \begin{frame}{Memory Management}
     \begin{columns}
         \begin{column}{0.45\textwidth}
-            Real memory is managed by your OS kernel, a process sees only
+            Physical memory is managed by your OS kernel, a process sees only
             \textbf{virtual} memory.
             \medskip
 
@@ -87,8 +87,9 @@
             (\textbf{memory management unit}) and software (kernel).
             \medskip
 
-            \SI{4}{\kibi\byte} typical page size, addresses can be decomposed,
-            page pointer + offset:
+            \SI{4}{\kibi\byte} typical page size, addresses can be decomposed
+            in page pointer + offset:
+            \smallskip
 
             $\mathtt{0xA1B2C3D4} \to \texttt{0xA1B2C000} + \mathtt{0x3D4}$
         \end{column}
@@ -115,49 +116,6 @@
                 \item Pages have permissions \texttt{rwx} (DEP)
                 \item Layout not always the same (ASLR)
                 \item Lots of pointers
-            \end{itemize}
-        \end{column}
-    \end{columns}
-\end{frame}
-
-\begin{frame}{Calling Convention}
-    \begin{columns}
-        \begin{column}{0.5\textwidth}
-            Defines:
-
-            \begin{itemize}
-                \item where to place arguments
-                \item where to place return value
-                \item where to place return address
-                \item who prepares the stack
-                \item who cleans afterwards\\
-                    (caller vs.\ callee)
-            \end{itemize}
-            \pause
-
-            Depends on:
-
-            \begin{itemize}
-                \item your platform
-                \item your toolchain (language)
-                \item your settings (compiler flags)
-            \end{itemize}
-        \end{column}
-        \pause
-        \begin{column}{0.5\textwidth}
-            I know, Radu never told you\dots
-            \medskip
-
-            \textbf{C Declaration (cdecl):}
-
-            \begin{itemize}
-                \item arguments on stack (reverse order)\\
-                    stack aligned to \SI{16}{\byte} boundary
-                \item return via register (\texttt{EAX} / \texttt{ST0})
-                \item return address on stack\\
-                    (old instruction pointer \texttt{IP})
-                \item old base pointer \texttt{BP}
-                \item caller does the cleanup
             \end{itemize}
         \end{column}
     \end{columns}
@@ -210,6 +168,49 @@
         \end{column}
     \end{columns}
     \sidenote{- Wikipedia}
+\end{frame}
+
+\begin{frame}{Calling Convention}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            Defines:
+
+            \begin{itemize}
+                \item where to place arguments
+                \item where to place return value
+                \item where to place return address
+                \item who prepares the stack
+                \item who cleans up\\
+                    (caller or callee)
+            \end{itemize}
+            \pause
+
+            Depends on:
+
+            \begin{itemize}
+                \item your platform
+                \item your toolchain (language)
+                \item your settings (compiler flags)
+            \end{itemize}
+        \end{column}
+        \pause
+        \begin{column}{0.5\textwidth}
+            I know, Radu never told you\dots
+            \medskip
+
+            \textbf{C Declaration (cdecl):}
+
+            \begin{itemize}
+                \item arguments on stack (reverse order)\\
+                    stack aligned to \SI{16}{\byte} boundary
+                \item return via register (\texttt{EAX} / \texttt{ST0})
+                \item return address on stack\\
+                    (old instruction pointer \texttt{IP})
+                \item old base pointer \texttt{BP}
+                \item caller does the cleanup
+            \end{itemize}
+        \end{column}
+    \end{columns}
 \end{frame}
 
 \section{Exploit printf}
@@ -407,9 +408,31 @@
     \sidenote{- \url{https://dhavalkapil.com/blogs/Shellcode-Injection/}}
 \end{frame}
 
-% TODO padding calculation + nop sledge
+\begin{frame}[fragile]{Putting it together}
+    \begin{itemize}
+        \item Starting position of the stack varies because of environment
+            variables\\
+            \medskip
+            $\implies$ prepend shellcode with \textit{NOP Sled} to improve our
+            odds
+        \bigskip
+        \item return address will be located after \texttt{buf}\\
+            \medskip
+            $\implies$ append \texttt{A}s to our shellcode until we reach the
+            return address
+        \bigskip
+        \item Aim for the center of the \textit{NOP Sled}\\
+            \medskip
+            $\mathit{target} = \frac{\mathrm{length}(\text{NOP Sled})}{2}\ +\ \mathrm{length}(\text{shellcode})\ +\ \#(\texttt{A})\ +\ \texttt{\&RET}$
+   \end{itemize}
+   \begin{pre*}{autogobble,xleftmargin=3cm}
+               .------------------------------------------.
+               V                                          |
+       |--- NOP SLED ---|--- SHELL CODE ---|-AAAAAAAAA-|-RET-|
+   \end{pre*}
+\end{frame}
 
-\begin{frame}{Bend Return Address into Buffer}
+\begin{frame}{Inject Shell Code}
     \begin{center}
         \huge Demonstration
     \end{center}
@@ -642,8 +665,8 @@
                 0xbffff554: 0x41414141             <-- buf
                 0xbffff558: 0x0a414141
                 0xbffff55c: 0x17981f00             <-- canary
-                0xbffff560: 0x00000001 (padding)
-                0xbffff564: 0xbffff624 (padding)
+                       (padding)
+                       (padding)
                 0xbffff568: 0xbffff578 (Saved RBP) <-- ebp
                 0xbffff56c: 0x0804852a (Saved RIP)
                 ------------------------
@@ -796,7 +819,13 @@
     \end{itemize}
 \end{frame}
 
-\section{Fuzzing}
+\begin{frame}{Outlook}
+    \begin{center}
+        Code Pointer Integrity (Volodymyr Kuznetsov \textit{et al.})
+    \end{center}
+\end{frame}
+
+% \section{Fuzzing}
 
 \section{Polymorphic Code}
 
