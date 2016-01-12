@@ -52,7 +52,7 @@
 
 \section{Platform x86}
 
-\begin{frame}{Why?}
+\begin{frame}{Why x86?}
     \begin{itemize}
         \item It's simpler, yet not overly simplified
         \item People call it \emph{more academic} \quad *sigh*
@@ -60,7 +60,7 @@
         \item Most material covers x86
     \end{itemize}
     \bigskip
-    We are using Ubuntu 15.10 x86 inside VirtualBox here
+    Demonstrations: Ubuntu 14.04 LTS x86 inside VirtualBox
 \end{frame}
 
 \begin{frame}{Registers}
@@ -71,10 +71,25 @@
 \end{frame}
 
 \begin{frame}{Registers}
-    \begin{center}
-        \includegraphics[height=0.5\textheight]{single_register}
-    \end{center}
-    \sidenote{- \url{http://nullprogram.com/}}
+    \begin{columns}
+        \begin{column}{0.45\textwidth}
+            \begin{description}
+                \item[\texttt{EAX}] Accumulator Register
+                \item[\texttt{EBX}] Base Register
+                \item[\texttt{ECX}] Counter Register
+                \item[\texttt{EDX}] Data Register
+                \item[\texttt{ESI}] Source Index
+                \item[\texttt{EDI}] Destination Index
+                \item[\texttt{EBP}] Base Pointer
+                \item[\texttt{ESP}] Stack Pointer
+            \end{description}
+        \end{column}
+        \begin{column}{0.55\textwidth}
+                \includegraphics[width=\textwidth]{single_register}
+        \end{column}
+    \end{columns}
+    \sidenote{- \url{http://www.swansontec.com/sregisters.html} /
+    \url{http://nullprogram.com/}}
 \end{frame}
 
 \begin{frame}{Memory Management}
@@ -110,7 +125,8 @@
         \begin{column}{0.5\textwidth}
             You may already know some of this.
             \bigskip
-            We'll see:
+
+            What we'll see today:
             \begin{itemize}
                 \item Pages have permissions \texttt{rwx} (DEP)
                 \item Layout not always the same (ASLR)
@@ -130,12 +146,15 @@
             Your CPU can switch from a more privileged state to a less
             privileged one
             \bigskip
+
             Kernel does not run always, process cannot do everything (enforced
             by hardware)
             \bigskip
+
             Process uses \emph{System Calls} to notify the kernel to take over
             (context switch)
             \medskip
+
             \begin{nasmcode*}{autogobble,linenos=false}
                 int   0x80   ; old, but still works
                 call  write  ; new, sysenter via VDSO
@@ -206,7 +225,7 @@
 
 \begin{frame}{Main Assumption}
    \begin{center}
-       The target binary and libraries are known.
+       \huge The target binary and libraries are known.
    \end{center}
 \end{frame}
 
@@ -337,7 +356,7 @@
     \sidenote{- Wikipedia}
 \end{frame}
 
-\begin{frame}{Overwrite a Flag}
+\begin{frame}{Return to a Different Function}
     \begin{center}
         \huge Demonstration
     \end{center}
@@ -405,6 +424,12 @@
     \sidenote{- \url{https://dhavalkapil.com/blogs/Shellcode-Injection/}}
 \end{frame}
 
+\begin{frame}{Inject Shell Code}
+    \begin{center}
+        \huge Demonstration
+    \end{center}
+\end{frame}
+
 \begin{frame}[fragile]{Putting it together}
     \begin{itemize}
         \item Starting position of the stack varies because of environment
@@ -425,12 +450,6 @@
    \begin{center}
        \input{gfx/shellcode.tikz}
    \end{center}
-\end{frame}
-
-\begin{frame}{Inject Shell Code}
-    \begin{center}
-        \huge Demonstration
-    \end{center}
 \end{frame}
 
 \section{Data Execution Prevention (DEP)}
@@ -475,12 +494,6 @@
         \pause
         \item Take control!
     \end{itemize}
-\end{frame}
-
-\begin{frame}{Return to a Different Function}
-    \begin{center}
-        \huge Demonstration
-    \end{center}
 \end{frame}
 
 \section{Return Oriented Programming (ROP)}
@@ -533,6 +546,12 @@
         \end{column}
     \end{columns}
     \sidenote{- \url{https://crypto.stanford.edu/~blynn/rop/}}
+\end{frame}
+
+\begin{frame}{Return2libc}
+    \begin{center}
+        \huge Demonstration
+    \end{center}
 \end{frame}
 
 \section{Address Space Layout Randomization (ASLR)}
@@ -939,9 +958,16 @@
 \section*{Conclusion}
 
 \begin{frame}{Fin.}
-   \begin{center}
-       \huge OMG finally\dots
-   \end{center}
+    \begin{center}
+        \huge OMG finally\dots
+    \end{center}
+    \bigskip
+    GitHub: \url{https://github.com/HeapLock/ETnM}
+    \begin{itemize}
+        \item Slides + Handout
+        \item Writeup
+        \item Examples
+    \end{itemize}
 \end{frame}
 
 \begin{frame}{``But I use Java!''}
