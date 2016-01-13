@@ -250,6 +250,7 @@
 
 % title
 \ifboolexpr{bool{article} or bool{book} or bool{report}}{
+    \renewcommand\and{\\[\baselineskip]}
     \usepackage{sty/titlepage}
 }{}
 \ifbool{short}{

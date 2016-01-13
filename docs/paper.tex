@@ -1,0 +1,94 @@
+% vim:set spell tw=79:
+
+\documentclass[article]{uibk}
+\title{Exploitation Techniques and Mitigations}
+\author{Alex Hirsch \and Patrick Ober}
+\date{2016-01-31}
+
+\begin{document}
+
+\maketitle
+
+% \section*{Abstract}
+% \label{sec:abstract}
+
+% \tableofcontents
+
+% \newpage
+
+\section*{Acknowledgement}
+
+A university course at Rensselaer Polytechnic
+Institut\footnote{\url{http://rpi.edu/}} held in Spring 2015 focused on
+\textit{Modern Binary Exploitation}. They made their course material available
+on GitHub \cite{RPISEC} under the Creative Commons Attribution-NonCommercial
+4.0 International
+license\footnote{\url{https://creativecommons.org/licenses/by-nc/4.0/legalcode}}.
+We reused a lot of their material in this project.
+
+We highly recommend checking them out and having a look at their material for
+further details.
+
+\section{Introduction}
+
+Exploiting binaries was comparatively easy in the early days of computing.
+Usually there were no special mitigation techniques in place trying to prevent
+even the most simplest exploits. This is the point in time where we will start
+of. First we talk about two very simple exploits, namely the Format String
+Exploit and the Buffer Overflow in combination with Shell Code. Note that there
+is a huge collection of exploitation techniques known to the public and we will
+thereby only look at a very small fraction of them.
+
+But before we can introduce these two exploits, some background knowledge is
+required. This will be handled by the next section, which provides a short
+overview of the relevant components in our target architecture, the x86
+platform.
+
+After that both techniques are introduced to the reader, followed by the first
+mitigation technique, Data Execution Prevention (DEP). From there on we will
+keep on using the buffer overflow technique with some adaptations to circumvent
+DEP. At this point Return Oriented Programming (ROP) is introduced.
+
+This directly leads to Address Space Layout Randomization (ASLR) the next
+mitigation mechanism we will discuss. Again the buffer overflow technique can
+be adapted to break ASLR through the use of additional information.
+
+Since neither DEP nor ASLR provide significant protection against even this
+simple technique, an additional mitigation is put into place in the form of
+Stack Cookies.
+
+Examples will be provided along the way to support the reader and provide some
+additional explanation.
+
+Control Flow Integrity (CFI), Heap Corruption and polymorphic code will follow
+in a more compressed manner to communicate the main idea behind each of them.
+
+Finally we will conclude with a word about other architectures (x86\_64 and
+ARM) and a lookout that even languages considered secure have their own set of
+exploitation techniques an attacker could leverage.
+
+\section{Platform x86}
+
+This section will teach necessary background knowledge about the target
+platform to fully conceive the following techniques. But first let us elaborate
+why x86 has been chosen in the first place.
+
+At the time these techniques (and the related mitigations) were established,
+x86 was the most common platform. Since most exploits easily translate over
+from x86 to other architectures, especially x86\_64 which very common nowadays.
+Also, most material found on the internet regarding this and related topics
+cover x86.
+
+More detailed explanations can be found on
+Wikipedia\footnote{\url{https://en.wikipedia.org/wiki/X86}} or the Intel
+Manual\footnote{\url{https://www-ssl.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html}}.
+
+\subsection{CPU and registers}
+
+\subsection{Memory}
+
+\newpage
+
+\bibliography{references}
+
+\end{document}
