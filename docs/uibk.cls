@@ -77,6 +77,11 @@
 \newcommand*{\@uibkLarge}{\sffamily\mdseries\upshape\fontsize{12}{12}\selectfont}
 \newcommand*{\@uibkLARGE}{\sffamily\mdseries\upshape\fontsize{16}{16}\selectfont}
 
+% unicode abbr
+\usepackage{newunicodechar}
+    \newunicodechar{〈}{$\langle$}
+    \newunicodechar{〉}{$\rangle$}
+
 % color
 \usepackage{xcolor}
     \definecolor{uibkblue}{cmyk}{1.0, 0.6, 0.0, 0.56}
