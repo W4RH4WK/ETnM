@@ -67,6 +67,36 @@ Finally we will conclude with a word about other architectures (x86\_64 and
 ARM) and a lookout that even languages considered secure have their own set of
 exploitation techniques an attacker could leverage.
 
+\subsection{Main Assumption}
+
+Throughout this work we assume that we know the target binary (and the
+libraries it uses). Let us show that this assumption is quite reasonable to
+make by looking through the eyes of the adversary. An attacker who wants to
+penetrate a target machine and get control over it would most likely choose the
+easiest path, by exploiting the weakest link. Most machines relevant to an
+attackers interest will run provide multiple services. For example, while the
+main server of a small business company may run a homemade communication server
+for interaction between them and their clients, it may also run a standard web
+server. Sending a misspelled request to the server may lead following response:
+
+\begin{pre*}{autogobble,xleftmargin=1cm}
+    <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+    <html><head>
+    <title>400 Bad Request</title>
+    </head><body>
+    <h1>Bad Request</h1>
+    <p>Your browser sent a request that this server could not understand.<br />
+    </p>
+    <hr>
+    <address>Apache/2.2.22 (Ubuntu) Server at ovinnik.canonical.com Port 80</address>
+    </body></html>
+    Connection closed by foreign host.
+\end{pre*}
+
+The web server tells us his exact version and since it also provides
+information about the operating system an attacker can easily copy the basic
+setup to test and tweak his exploits.
+
 \section{Platform x86}
 
 This section will teach necessary background knowledge about the target
