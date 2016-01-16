@@ -216,6 +216,7 @@ used for dynamic data, the stack used for local variables and function calling
 and used libraries.
 
 \subsection{Endianness}
+\label{sub:endianness}
 
 \begin{figure}[t]
     \centering
@@ -231,6 +232,7 @@ illustrates that the least significant byte of a word is placed at the lower
 memory address and successive bytes are placed as the memory address increases.
 
 \subsection{Calling Convention}
+\label{sub:calling_convention}
 
 A calling convention defines how function calls should be implemented. What
 calling convention is used depends on the platform, toolchain and (compiler)
@@ -264,9 +266,84 @@ using.
     \end{itemize}
 \end{minipage}
 
-\newpage
-
 \section{Format String Exploits}
+
+The first exploitation technique we will discuss builds upon the interpretation
+of format strings. \texttt{printf} is a C function of the standard library
+which will interpret such strings and print them to \texttt{stdout}. As the
+name already tells you, the supplied string contains \textit{formatter}
+describing how to actually handle additional arguments. If you are unfamiliar
+with \texttt{printf} please have a look at the man
+page\footnote{\url{http://linux.die.net/man/3/printf}}.
+
+Taking a closer look at \texttt{printf} we can see that its first argument is a
+format string followed by a variable number of additional arguments. In C you
+don't know how many arguments have been supplied when a function with a
+variable number of arguments is called. Some instances work around this by
+taking an argument count as their first argument, others expect you to
+terminate with a special symbol (usually \texttt{NULL}). \texttt{printf} uses
+the format string to derive how many arguments have been supplied. Calling
+\texttt{printf}, for example, with the string \texttt{"\%d + \%d = \%d"}
+assumes that (at least) three arguments have been provided.
+
+\begin{listing}[h!]
+    \begin{minipage}[t]{0.47\textwidth}
+        \cfile{../format_string/main.c}
+    \end{minipage}
+    \begin{minipage}[t]{0.47\textwidth}
+        \begin{pre*}{autogobble}
+            > echo foobar | ./main
+            You entered:
+            foobar
+        \end{pre*}
+        \medskip
+        \begin{pre*}{autogobble}
+            > echo AAAABBBB | ./main
+            correct
+        \end{pre*}
+        \medskip
+        \begin{pre*} {autogobble}
+            > echo '%08x' | ./main
+            You entered:
+            bfd98ed4
+        \end{pre*}
+    \end{minipage}
+    \caption{Program vulnerable to Format String Exploits}
+    \label{src:format_string_exploit}
+\end{listing}
+
+The exploit comes from the notion that a format string provided by an attacker
+gets interpreted. The program shown in \cref{src:format_string_exploit} will
+take an arbitrary string from \texttt{stdin} and pass it on to \texttt{printf}.
+For simple inputs (not containing formatter) this works fine. But as soon as
+formatter are provided, \texttt{printf} is going to access the locations where
+the corresponding arguments \emph{would} be located. From the calling
+convention described in \cref{sub:calling_convention} we know that these
+arguments would be located on the stack, therefore \texttt{printf} will print
+whatever lies on the stack.
+
+To fully exploit the provided example, note that an attacker in this scenario
+wants to get a hold of the hardcoded password stored in \texttt{passwd}. Since
+local variables are placed on the stack \texttt{printf} will be able to read
+the password if enough formatters are provided:
+
+\begin{pre*} {autogobble}
+    > python -c 'print "%08x." * 10' | ./main
+    bf920c14.00000064.b77de29e.00000000.00000000.b77fedf8.bf920d94.00000000.41414141.42424242.
+\end{pre*}
+
+Here we use Python to craft the format string for us. As we can see the
+password is printed (ASCII encoded). Byte order is swapped because of
+endianness (see \cref{sub:endianness}). Apart from the password we also gather
+a bunch of pointers, these can be used later on to break ASLR (see
+\cref{sub:info_leak}).
+
+We would like to point the reader to the book \textit{Hacking: The Art of
+Exploitation} \cite[pp.~167]{art_of_exploitation} for more details about this
+technique. We will come back to this technique later on to show that
+\texttt{printf} enables even more sophisticated attacks.
+
+\newpage
 
 \section{Buffer Overflow}
 
