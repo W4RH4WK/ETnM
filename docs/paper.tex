@@ -5,15 +5,18 @@
 \author{Alex Hirsch \and Patrick Ober}
 \date{2016-01-31}
 
+\newminted{nasm}{fontsize=\scriptsize,frame=leftline,framesep=2mm,linenos}
+
 \begin{document}
 
-\maketitle
-
+% \maketitle
+%
 % \section*{Abstract}
 % \label{sec:abstract}
-
+%
+% \setcounter{tocdepth}{1}
 % \tableofcontents
-
+%
 % \newpage
 
 \section*{Acknowledgement}
@@ -115,9 +118,173 @@ Manual\footnote{\url{https://www-ssl.intel.com/content/www/us/en/processors/arch
 
 \subsection{CPU and registers}
 
+\begin{figure}[htpb]
+    \centering
+    \includegraphics[width=\textwidth]{gfx/x86_registers.pdf}
+    \caption{Register overview including \SI{64}{\bit} extension}
+    \label{fig:registers}
+\end{figure}
+
+\Cref{fig:registers} (from
+Wikipedia\footnote{\url{https://en.wikipedia.org/w/index.php?title=X86&oldid=696308590\#/media/File:Table_of_x86_Registers_svg.svg}})
+shows an overview of registers available on the x86 platform. While there are
+dedicated registers for floating pointer operations and also special registers
+which hardware protection (segment registers) we will only focus on nine most
+commonly used registers.
+
+\begin{minipage}[t]{0.5\textwidth}
+    \begin{description}
+        \item[\texttt{EAX}] Accumulator Register
+        \item[\texttt{EBX}] Base Register
+        \item[\texttt{ECX}] Counter Register
+        \item[\texttt{EDX}] Data Register
+        \item[\texttt{ESI}] Source Index
+        \item[\texttt{EDI}] Destination Index
+        \item[\texttt{EBP}] Base Pointer
+        \item[\texttt{ESP}] Stack Pointer
+        \item[\texttt{EIP}] Instruction Pointer
+    \end{description}
+\end{minipage}
+\begin{minipage}[t]{0.45\textwidth}
+    \begin{figure}[H]
+        \includegraphics[width=\textwidth]{gfx/single_register.png}
+        \caption{Addressing specific parts of a register including \SI{64}{\bit} extension}
+        \label{fig:single_register}
+    \end{figure}
+\end{minipage}
+\bigskip
+
+The instruction pointer \texttt{EIP} points to the next instruction located in
+memory which is going to be executed on the cycle. Stack pointer \texttt{ESP} and base
+pointer \texttt{EBP} are used for stack management which is vital to call and
+return from multiple functions properly. The remaining six registers are used
+for computation and passing arguments for system calls. Their values can either
+be interpreted as integers or pointers.
+
+Note that these registers can be addressed partially allowing one to write only
+to the lower \SI{16}{bit} for example as displayed in
+\cref{fig:single_register} taken from \textit{null
+programm}\footnote{\url{http://nullprogram.com/img/x86/register.png} on
+December of 2015}.
+
+The CPU comes with protection mechanisms which allows the operating system
+kernel to limit the privileges of other processes. This mechanism is known as
+\textit{protection rings} (Ring 0 -- Ring 3). The kernel runs \emph{in} Ring 0
+(most privileged) and switches to Ring 3 (least privileged) when a normal
+process is scheduled. A system call has to be made by the process if it needs
+something which goes beyond its scope. The kernel takes over, deals with the
+request and returns execution back to the process. This is known as
+\textit{context switch} and switching between Rings happens along the way.
+
+\subsection{System Calls}
+
+As already mentioned in the previous paragraph, a process only has limited
+capabilities and the kernel has to take over to fulfill certain (more
+privileged) operations. The operating system's documentation tells you which
+system calls are available (on which platform) and what additional parameters
+they require. Let us illustrate this with an example: On x86 the Linux system
+number 4 (starting from 0) is the \texttt{sys\_write} system call which writes
+data to a file descriptor. It takes three arguments, the file descriptor to
+write to, a pointer to the start of the data which should be written and the
+length of the data. The number of the system call together with these three
+parameters are placed in the \texttt{EAX}, \texttt{EBX}, \texttt{ECX},
+\texttt{EDX} respectively. To invoke the system call issue following
+instruction:
+
+\begin{nasmcode*}{autogobble,xleftmargin=1cm,linenos=false}
+    int     0x80
+\end{nasmcode*}
+
+Nowadays you may encounter a different mechanism for system calls, the Virtual
+Dynamic Shared Objects (vDSO) mechanism. This goes beyond our scope here, we
+will use the previously mentioned mechanism in our exploits. If interested, you
+may want to look at the related man
+page\footnote{\url{http://man7.org/linux/man-pages/man7/vdso.7.html}}.
+
 \subsection{Memory}
 
+Physical memory is managed by the operation system kernel by utilising the
+Memory Management Unit (MMU). Each process' address space is virtualized and
+memory operations are translated on-the-fly by the MMU. The physical memory is
+segmented into \textit{pages} (typically \SI{4}{\kibi\byte} in size) and each
+page can be mapped into the virtual address space of one or more (shared)
+processes.~\cite[pp.~400]{unix_interals}
+
+The main parts located inside the (virtual) address space of a process are the
+executable itself with its \texttt{.text} and \texttt{.data} section, the heap
+used for dynamic data, the stack used for local variables and function calling
+and used libraries.
+
+\subsection{Endianness}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.35\textwidth]{gfx/little_endian.pdf}
+    \caption{Placement of bytes in memory in little-endian}
+    \label{fig:little_endian}
+\end{figure}
+
+Endianness refers to the byte order used when storing data in memory (or
+transmitting it over the network). \Cref{fig:little_endian} (from
+Wikipedia\footnote{\url{https://en.wikipedia.org/w/index.php?title=Endianness&oldid=696417697\#/media/File:Little-Endian.svg}})
+illustrates that the least significant byte of a word is placed at the lower
+memory address and successive bytes are placed as the memory address increases.
+
+\subsection{Calling Convention}
+
+A calling convention defines how function calls should be implemented. What
+calling convention is used depends on the platform, toolchain and (compiler)
+settings. Let us exhibit what the convention defines and what convention we are
+using.
+
+\begin{minipage}[t]{0.47\textwidth}
+    Defines:
+    \begin{itemize}
+        \item Where to place arguments
+        \item Where to place return value
+        \item Where to place return address
+        \item Who prepares the stack
+        \item Who saves which register
+        \item Who cleans up\\
+            (caller or callee)
+    \end{itemize}
+\end{minipage}
+\begin{minipage}[t]{0.47\textwidth}
+    C Declaration (cdecl):
+    \begin{itemize}
+        \item Arguments on stack (reverse order)\\
+            stack aligned to \SI{16}{\byte} boundary
+        \item Return via register (\texttt{EAX} / \texttt{ST0})
+        \item \texttt{EAX}, \texttt{ECX}, \texttt{EDX} saved by the caller\\
+            rest saved by the callee
+        \item On stack:\\
+            old instruction pointer (\texttt{IP})\\
+            old base pointer (\texttt{BP})
+        \item Caller does the cleanup
+    \end{itemize}
+\end{minipage}
+
 \newpage
+
+\section{Format String Exploits}
+
+\section{Buffer Overflow}
+
+\section{Shell Code}
+
+\section{Data Execution Prevention (DEP)}
+
+\section{Return Oriented Programming (ROP)}
+
+\section{Address Space Layout Randomization (ASLR)}
+
+\section{Stack Cookies}
+
+\section{Control Flow Integrity (CFI)}
+
+\section{Other Architectures}
+
+\section{Conclusion}
 
 \bibliography{references}
 
