@@ -193,7 +193,7 @@
 \usepackage{pdfpages}
 
 % references
-\usepackage{cleveref}
+\usepackage[noabbrev]{cleveref}
 \usepackage[numbers]{natbib}
     \bibliographystyle{plainnat}
 
@@ -216,10 +216,28 @@
     \renewcommand{\theFancyVerbLine}{\normalfont{\tiny\arabic{FancyVerbLine}}}
     \renewcommand{\listingscaption}{\normalfont Listing}
     \renewcommand{\listoflistingscaption}{List of Listings}
-    \newminted[code]{text}{fontsize=\scriptsize,frame=leftline,framesep=2mm,linenos}
-    \newminted[pre]{text}{fontsize=\scriptsize,framesep=2mm}
-    \newminted{c}{fontsize=\scriptsize,frame=leftline,framesep=2mm,linenos}
-    \newmintedfile{c}{fontsize=\scriptsize,frame=leftline,framesep=2mm,linenos}
+    \newminted[code]{text}{
+        fontsize=\scriptsize,
+        frame=leftline,
+        framesep=2mm,
+        autogobble,
+        linenos}
+    \newmintedfile[codefile]{text}{
+        fontsize=\scriptsize,
+        frame=leftline,
+        framesep=2mm,
+        linenos}
+    \newminted{c}{
+        fontsize=\scriptsize,
+        frame=leftline,
+        framesep=2mm,
+        autogobble,
+        linenos}
+    \newmintedfile{c}{
+        fontsize=\scriptsize,
+        frame=leftline,
+        framesep=2mm,
+        linenos}
 
 % tables
 \let\@uibktoc\tableofcontents

