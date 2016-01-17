@@ -443,7 +443,7 @@ to jump to. Lets jump into the function \texttt{mordor} located at
 \texttt{0x804849b}, keep in mind that the byte order needs to be swapped.
 
 \begin{pre}
-> python -c "print 'A'*32 + '\x9b\x84\x04\x08'" | ./overflow 
+> python -c "print 'A'*32 + '\x9b\x84\x04\x08'" | ./overflow
 Enter text:
 You entered: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA��
 One does not simply jump into mordor()!
@@ -454,6 +454,66 @@ And the function \texttt{mordor} has been executed, despite the segmentation
 fault one can see that return address has been overwritten successfully.
 
 \section{Shell Code}
+
+While this is neat and can certainly be useful to an adversary, stack smashing
+also enables us to inject arbitrary code into a program. Contrary to the
+previous section the target machine will execute code provided by the attacker.
+This can be achieved by bending the return address into the buffer used for the
+exploit. Provided instructions will be executed upon return. Shell code is a
+piece of (binary) code which opens up a shell that reads and executes commands
+from an attacker. Lets start this section by crafting some shell code.
+
+\begin{nasmcode*}{autogobble,xleftmargin=1em}
+    xor     eax, eax    ;Clearing eax register
+    push    eax         ;Pushing NULL bytes
+    push    0x68732f2f  ;Pushing //sh
+    push    0x6e69622f  ;Pushing /bin
+    mov     ebx, esp    ;ebx now has address of /bin//sh
+    push    eax         ;Pushing NULL byte
+    mov     edx, esp    ;edx now has address of NULL byte
+    push    ebx         ;Pushing address of /bin//sh
+    mov     ecx, esp    ;ecx now has address of address
+                        ;of /bin//sh byte
+    mov     al, 11      ;syscall number of execve is 11
+    int     0x80        ;Make the system call
+\end{nasmcode*}
+
+This piece of assembly sets up the parameters for the \texttt{execve} system
+call and than invokes to replace the currently running process with a shell.
+\texttt{execve} takes three arugments, a string of the program to execute (here
+\texttt{"/bin//sh"} + terminator), a list of arguments for that program and a
+list of environment variables. Its system call number is 11 and it will accept
+\texttt{NULL} for both lists. The double slash in the first argument is used to
+prevent null bytes inside the shell code. The function which reads the shell
+code may truncate it upon reading a null byte, therefore we have to work around
+this without chaning the underlying semantics.
+
+Running this code through an assembler yields binary code which can be placed
+in the buffer. Finding the starting location of our buffer will be a little bit
+more complicated, we cannot read it directly from the binary of the target
+program so we'll examine it in a debugger.
+
+Now we know that the buffer will be located at XXXXXXXX at runtime, but since
+we got this address while running the program in a debugger it may be offset a
+few bytes when run without debugger. This happens because environment variables
+and meta information, like the program name, determin the stack starting
+position (they are placed right after the stack). Hence we may not directly hit
+the first instruction of our shell code right away, but since the buffer is
+bigger than the actual payload we can improve our odds by prefixing the shell
+code with \texttt{NOP} instructions. As long as the return address points
+somewhere into this sequence of \texttt{NOP}s the CPU will \emph{slide} to the
+next instruction. Therefore this is known as a \textit{\texttt{NOP} Sled}. We
+append some arbitrary data to the shell code as offset to overwrite the return
+address.
+
+\begin{figure}[H]
+    \centering
+    \input{gfx/shellcode.tikz}
+    \caption{Putting the payload together}
+    \label{fig:shell_code}
+\end{figure}
+
+\newpage
 
 \section{Data Execution Prevention (DEP)}
 
