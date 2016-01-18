@@ -12,6 +12,12 @@
     framesep=2mm,
     autogobble,
     linenos}
+\newmintedfile{nasm}{
+    fontsize=\scriptsize,
+    frame=leftline,
+    framesep=2mm,
+    autogobble,
+    linenos}
 
 \begin{document}
 
@@ -42,8 +48,8 @@ further details apart from the given references.
 
 Exploiting binaries was comparatively easy ten to fifteen years ago. There were
 no special mitigation mechanisms in place denying even the most simplest
-exploits. This is the point in time where we will start of. First we talk about
-two very simple exploits, namely the Format String Exploit and the Buffer
+exploits. This is the point in time where we will start off. First we talk
+about two very simple exploits, namely the Format String Exploit and the Buffer
 Overflow in combination with Shell Code. Although there is a huge collection of
 exploitation techniques known to the public, we will only look at a very small
 fraction of them in this project.
@@ -181,7 +187,7 @@ Note that these registers can be addressed partially allowing one to write only
 to the lower \SI{16}{bit}, for example, as displayed in
 \cref{fig:single_register} taken from \textit{null
 programm}\footnote{\url{http://nullprogram.com/img/x86/register.png} on
-December of 2015}.
+December 2015}.
 
 The CPU comes with protection mechanisms which allows the operating system
 kernel to limit other processes' privileges. This mechanism is known as
@@ -294,26 +300,29 @@ The first exploitation technique we will discuss builds upon the interpretation
 of format strings. \texttt{printf} is a C function of the standard library
 which will interpret such strings and print them to \texttt{stdout}. As the
 name already tells you, the supplied string contains \textit{formatter}
-describing how to actually handle additional arguments. If you are unfamiliar
-with \texttt{printf} please have a look at the man
-page\footnote{\url{http://linux.die.net/man/3/printf}}.
+describing how to handle additional arguments. If you are unfamiliar with
+\texttt{printf} please have a look at the man
+page\footnote{\url{http://linux.die.net/man/3/printf}} now.
 
 Taking a closer look at \texttt{printf} we can see that its first argument is a
-format string followed by a variable number of additional arguments. In C you
-don't know how many arguments have been supplied when a function with a
-variable number of arguments is called. Some instances work around this by
-taking an argument count as their first argument, others expect you to
-terminate with a special symbol (usually \texttt{NULL}). \texttt{printf} uses
-the format string to derive how many arguments have been supplied. Calling
-\texttt{printf}, for example, with the string \texttt{"\%d + \%d = \%d"}
-assumes that (at least) three arguments have been provided.
+format string followed by a variable number of additional arguments.
+\texttt{stdarg.h} describes a common implementation of this together with a
+small example in their man
+page\footnote{\url{http://linux.die.net/man/3/stdarg}}. As in that example,
+\texttt{printf} trusts you that the number of arguments supplied is equal (or
+greater) than the number of formatters. Calling \texttt{printf} with the format
+string \texttt{"\%d + \%d = \%d"}, for instance, assumes that (at least) three
+additional arguments are given.
 
 \begin{listing}[h!]
     \begin{minipage}[t]{0.4\textwidth}
-        \cfile{../format_string/main.c}
+        \cfile{../src/format_string/format.c}
     \end{minipage}\hfill
     \begin{minipage}[t]{0.5\textwidth}
         \begin{code*}{linenos=false}
+            > gcc -o format format.c
+
+
             > echo foobar | ./main
             You entered:
             foobar
@@ -336,32 +345,32 @@ The exploit comes from the notion that a format string provided by an attacker
 gets interpreted. The program shown in \cref{src:format_string_exploit} will
 take an arbitrary string from \texttt{stdin} and pass it on to \texttt{printf}.
 For simple inputs (not containing formatter) this works fine. But as soon as
-formatter are provided, \texttt{printf} is going to access the locations where
-the corresponding arguments \emph{would} be located. From the calling
-convention described in \cref{sub:calling_convention} we know that these
-arguments would be located on the stack, therefore \texttt{printf} will print
-whatever lies on the stack.
+formatter are provided, \texttt{printf} accesses the locations where the
+corresponding arguments \emph{would} be located. From the calling convention
+described in \cref{sub:calling_convention} we know that these arguments
+\emph{would} be located on the stack, therefore \texttt{printf} will print
+whatever lies on the stack at these positions instead.
 
-To fully exploit the provided example, note that an attacker in this scenario
-wants to get a hold of the hardcoded password stored in \texttt{passwd}. Since
-local variables are placed on the stack \texttt{printf} will be able to read
-the password if enough formatters are provided:
+An attacker in this scenario wants to get a hold of the hardcoded password
+stored in \texttt{passwd}. Since local variables are placed on the stack
+\texttt{printf} will be able to read the password if enough formatters are
+provided:
 
 \begin{code*}{linenos=false}
     > python -c 'print "%08x." * 10' | ./main
     bf920c14.00000064.b77de29e.00000000.00000000.b77fedf8.bf920d94.00000000.41414141.42424242.
 \end{code*}
 
-Here we use Python to craft the format string for us. As we can see the
-password is printed (ASCII encoded). Byte order is swapped because of
-endianness (see \cref{sub:endianness}). Apart from the password we also gather
-a bunch of pointers, these can be used later on to break ASLR (see
-\cref{sub:info_leak}).
+Here we use Python to craft the format string containing ten identifiers for
+us. As we can see the password is printed (ASCII encoded). Byte order is
+swapped because of endianness (see \cref{sub:endianness}). Apart from the
+password we also gather a bunch of pointers, these can be used later on to
+break ASLR (see \cref{sub:info_leak}).
 
 We would like to point the reader to the book \textit{Hacking: The Art of
-Exploitation} \cite[pp.~167]{art_of_exploitation} for more details about this
-technique. We will come back to this technique later on to show that
-\texttt{printf} enables even more sophisticated attacks.
+Exploitation}~\cite[pp.~167]{art_of_exploitation} for more details about this
+and following techniques. We will come back to this technique later on to show
+that \texttt{printf} enables even more sophisticated attacks.
 
 \section{Buffer Overflow}
 
@@ -369,7 +378,33 @@ The second type of exploits we'll look at is known as Buffer Overflows and as
 on may already derive from the name, this is about submitting more data to a
 buffer than it was originally designed for. This setup can be exploited when
 bound checking is done wrong or not at all. An attacker is therefore able to
-overwrite data (or instructions) next to the buffer's location.
+overwrite memory behind the buffer's location.
+
+\subsection{Disabling Mitigations}
+
+The three mitigation mechanisms DEP, ASLR and Stack Cookies are enabled by
+default nowadays and as mentioned in the introduction we start off at a pointer
+where these mechanisms were not. So to run the provided examples we first have
+to disable them. DEP and Stack Cookies can be disabled via compiler flags to
+the extend necessary using \texttt{-z execstack} and
+\texttt{-fno-stack-protector} respectively.
+
+ASLR can be disabled globally so that \emph{new} process' has an unscrambled
+memory layout:
+
+\begin{code*}{linenos=false}
+    > echo 0 > /proc/sys/kernel/randomize_va_space
+\end{code*}
+
+Writing \texttt{2} instead of \texttt{0} will switch ASLR back to its default
+state. Root privileges are, of course, required for this. There is also another
+way by invoking \texttt{setarch}:
+
+\begin{code*}{linenos=false}
+    > setarch `arch` -R ./binary
+\end{code*}
+
+\subsection{The Exploit}
 
 The consequences of an exploited buffer overflow depend on where the buffer is
 located. The most interesting location would of course be the stack because,
@@ -386,9 +421,9 @@ breaking ASLR, for now we focus our attention on stack smashing.
     \label{fig:stack_frame}
 \end{figure}
 
-Lets start of by examining the stack holding a buffer as local variable, see
-\cref{fig:stack_frame}. Right now the buffer contains the string
-\texttt{"hello"} followed by a terminator. Since the buffer has been allocated
+Lets start off by examining the stack containing a buffer \texttt{c} as local
+variable, see \cref{fig:stack_frame}. Right now the buffer holds the string
+\texttt{"hello"} followed by a terminator. Since it has been allocated
 to hold a maximum of \SI{12}{\byte} this fits. If data is written to the buffer
 larger than \SI{12}{\byte} the following variable (or parameter) \texttt{bar}
 will be overwritten, followed by the saved frame pointer and the return
@@ -396,18 +431,18 @@ address. If even more data is supplied the following stack frame will be
 overwritten in the same manner.
 
 If an attacker can provide the data written to the buffer and no (or wrong)
-bound checking is done, he can therefore inject arbitrary (malicious) into the
-stack frame. This could be, for instance, be used to overwrite a flag
+bound checking is done, he is able to inject arbitrary (malicious) code into
+the stack frame. This could be, for instance, be used to overwrite a flag
 indication whether an authentication has been performed successfully or not.
 But since this is pretty forward lets go beyond that and see what happens when
 changing the return address.
 
 \begin{listing}[h!]
-    \begin{minipage}[t]{0.4\textwidth}
-        \cfile{../overflow/overflow.c}
+    \begin{minipage}[t]{0.37\textwidth}
+        \cfile{../src/buffer_overflow/overflow.c}
     \end{minipage}\hfill
-    \begin{minipage}[t]{0.5\textwidth}
-        \codefile{../overflow/objdump.txt}
+    \begin{minipage}[t]{0.63\textwidth}
+        \codefile{../src/buffer_overflow/overflow_objdump.txt}
     \end{minipage}
     \caption{Program vulnerable to buffer overflows}
     \label{src:buffer_overflow}
@@ -418,21 +453,21 @@ As shown in \cref{src:buffer_overflow} we have a buffer suited for
 we will be able to overwrite the return address. Lets have a look at the
 resulting binary utilizing \texttt{objdump}.
 
-Looking at lines XX, XX and XX we can infer that the buffer will start
+Looking at lines 13 and 23 we can infer that the buffer will start
 \SI{28}{\byte} (\texttt{0x1c}) before the base pointer. Hence we have to supply
 \SI{32}{\byte} (28 + 4) of arbitrary data followed by the address where we want
 to jump to. Lets jump into the function \texttt{mordor} located at
 \texttt{0x804849b}, keep in mind that the byte order needs to be swapped.
 
 \begin{code*}{linenos=false}
-> python -c "print 'A'*32 + '\x9b\x84\x04\x08'" | ./overflow
+> python -c "print 'A'*32 + '\x9b\x84\x04\x08'" | setarch `arch` -R ./overflow
 Enter text:
 You entered: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA��
 One does not simply jump into mordor()!
 Segmentation fault (core dumped)
 \end{code*}
 
-And the function \texttt{mordor} has been executed, despite the segmentation
+\texttt{mordor} has been executed successfully. Despite the segmentation
 fault one can see that return address has been overwritten successfully.
 
 \section{Shell Code}
@@ -443,50 +478,74 @@ previous section the target machine will execute code provided by the attacker.
 This can be achieved by bending the return address into the buffer used for the
 exploit. Provided instructions will be executed upon return. Shell code is a
 piece of (binary) code which opens up a shell that reads and executes commands
-from an attacker. Lets start this section by crafting some shell code.
+from an attacker. This example is taken from Dhaval Kapil's
+blog\footnote{\url{https://dhavalkapil.com/blogs/Shellcode-Injection/} on
+December 2015} there is also a section about this in \textit{Hacking: The Art
+of Exploitation}~\cite[pp.~281]{art_of_exploitation}.
 
-\begin{nasmcode}
-    xor     eax, eax    ;Clearing eax register
-    push    eax         ;Pushing NULL bytes
-    push    0x68732f2f  ;Pushing //sh
-    push    0x6e69622f  ;Pushing /bin
-    mov     ebx, esp    ;ebx now has address of /bin//sh
-    push    eax         ;Pushing NULL byte
-    mov     edx, esp    ;edx now has address of NULL byte
-    push    ebx         ;Pushing address of /bin//sh
-    mov     ecx, esp    ;ecx now has address of address
-                        ;of /bin//sh byte
-    mov     al, 11      ;syscall number of execve is 11
-    int     0x80        ;Make the system call
-\end{nasmcode}
+\subsection{Crafting Shell Code}
 
-This piece of assembly sets up the parameters for the \texttt{execve} system
-call and than invokes to replace the currently running process with a shell.
-\texttt{execve} takes three arugments, a string of the program to execute (here
-\texttt{"/bin//sh"} + terminator), a list of arguments for that program and a
-list of environment variables. Its system call number is 11 and it will accept
-\texttt{NULL} for both lists. The double slash in the first argument is used to
-prevent null bytes inside the shell code. The function which reads the shell
-code may truncate it upon reading a null byte, therefore we have to work around
-this without chaning the underlying semantics.
+\begin{listing}[h!]
+    \begin{minipage}[t]{0.4\textwidth}
+        \nasmfile{../src/shell_code/shellcode.asm}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.5\textwidth}
+        \codefile{../src/shell_code/shellcode_objdump.txt}
+    \end{minipage}
+    \caption{Assembly code opening up a shell upon execution}
+    \label{src:shell_code}
+\end{listing}
 
-Running this code through an assembler yields binary code which can be placed
-in the buffer. Finding the starting location of our buffer will be a little bit
-more complicated, we cannot read it directly from the binary of the target
-program so we'll examine it in a debugger.
+The piece of assembly shown in \cref{src:shell_code} sets up the parameters for
+the \texttt{execve} system call and than invokes it to replace the currently
+running process with a shell. \texttt{execve} takes three arguments, a string
+of the program to execute (here \texttt{"/bin//sh"} + terminator), a list of
+arguments for that program and a list of environment variables. Its system call
+number is 11 and it will accept \texttt{NULL} for both lists. The double slash
+in the first argument is used to prevent null bytes inside the shell code. The
+function which reads the shell code may truncate it upon reading a null byte,
+therefore we have to work around this without changing the underlying
+semantics.
 
-Now we know that the buffer will be located at XXXXXXXX at runtime, but since
-we got this address while running the program in a debugger it may be offset a
-few bytes when run without debugger. This happens because environment variables
-and meta information, like the program name, determin the stack starting
-position (they are placed right after the stack). Hence we may not directly hit
-the first instruction of our shell code right away, but since the buffer is
-bigger than the actual payload we can improve our odds by prefixing the shell
-code with \texttt{NOP} instructions. As long as the return address points
-somewhere into this sequence of \texttt{NOP}s the CPU will \emph{slide} to the
-next instruction. Therefore this is known as a \textit{\texttt{NOP} Sled}. We
-append some arbitrary data to the shell code as offset to overwrite the return
-address.
+Running this code through an assembler yields binary code, shown in
+\cref{src:shell_code}, which will be part of the payload.
+
+\begin{code*}{linenos=false}
+    \x31\xC0\x50\x68\x2F\x2F\x73\x68\x68\x2F\x62\x69\x6E\x89\xE3\x50\x89\xE2\x53\x89\xE1\xB0\x0B\xCD\x80
+\end{code*}
+
+\subsection{Examining the Target Binary}
+
+Finding the starting location of our buffer will be a little bit more
+complicated, we cannot read it directly from the binary of the target program
+so, in \cref{src:shell_code2}, we'll examine it in a debugger .
+
+\begin{listing}[h!]
+    \begin{minipage}[t]{0.4\textwidth}
+        \cfile{../src/shell_code/vuln.c}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.5\textwidth}
+        \codefile{../src/shell_code/vuln_gdb.txt}
+    \end{minipage}
+    \caption{Examining the target binary in \texttt{gdb}}
+    \label{src:shell_code2}
+\end{listing}
+
+Now we know that the buffer will be located at \texttt{0xbffff4bc} (saved base
+pointer will be at \texttt{0xbffff528}) at runtime, but it may be offset a few
+bytes when run without debugger. This happens because environment variables and
+meta information, like the program name, determine the stack starting position
+(stack is placed right before environment variables). Hence we may not hit the
+first instruction of our shell code right away, but since the buffer is bigger
+than the actual payload we can improve our odds by prefixing the shell code
+with \texttt{NOP} instructions. As long as the return address points somewhere
+into this sequence of \texttt{NOP}s the CPU will \emph{slide} to the first
+instruction of the shell code. Therefore this is known as a
+\textit{\texttt{NOP} Sled}. We append some arbitrary data to the shell code as
+offset to overwrite the return address. This is also illustrated in
+\cref{fig:shell_code} where \textit{target} is new return address supplied by
+the attacker. Using the maximum amount of \texttt{NOP}s possible would also be
+a viable option, here we just went with the original example.
 
 \begin{figure}[H]
     \centering
@@ -495,13 +554,35 @@ address.
     \label{fig:shell_code}
 \end{figure}
 
-\newpage
+Lets first calculate the distance between the start of the buffer and the
+return address. The return address will be located \SI{4}{\byte} after the
+saved base pointer location.
+
+\[(\texttt{0xbffff528} + 4) - \texttt{0xbffff4bc} = 112\]
+
+We prefix our shell code with a \texttt{NOP} Sled consisting of \SI{40}{\byte}
+(opcode for \texttt{NOP} is \texttt{0x90}). Since our shell code is \SI{25}{\byte}
+long we add 47 \texttt{'A'}s to gap the remaining distance. Lastly we have to add
+the new return address which should point to the \texttt{NOP} Sled's center.
+
+\[\texttt{0xbffff4bc} + 20 = \texttt{0xbffff4d0}\]
+
+\subsection{Gimme that Shell already}
+
+\codefile[linenos=false]{../src/shell_code/run.txt}
+
+After injecting the payload we get a few lines of garbage and receive a prompt
+by hitting return a few times. You can enter commands and receive output like
+usual.
 
 \section{Data Execution Prevention (DEP)}
 
 \section{Return Oriented Programming (ROP)}
 
 \section{Address Space Layout Randomization (ASLR)}
+
+\subsection{Info Leak}
+\label{sub:info_leak}
 
 \section{Stack Cookies}
 

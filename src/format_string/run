@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -e
+
+# build
+gcc -o format format.c
+
+# run
+python -c "print '%08x.'*10" | ./format

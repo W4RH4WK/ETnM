@@ -1,12 +1,13 @@
 #include <stdio.h>
 
 void mordor(void) {
-    printf("One does not simply jump into mordor()!\n");
+    puts("One does not simply"
+         "jump into mordor()!");
 }
 
 void echo(void) {
     char buffer[20] = {0};
-    printf("Enter text:\n");
+    puts("Enter text:");
     scanf("%s", buffer);
     printf("You entered: %s\n", buffer);
 }

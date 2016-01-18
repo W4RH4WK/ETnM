@@ -1,0 +1,16 @@
+> gcc -g -fno-stack-protector -z execstack -o vuln vuln.c
+> gdb -q ./vuln
+(gdb) break 5
+Breakpoint 1 at 0x8048452: file vuln.c, line 5.
+
+(gdb) run player1
+Starting program: /mnt/ETnM/src/shell_code/vuln player1
+
+Breakpoint 1, func (name=0xbffff76d "player1") at vuln.c:5
+5		char buf[100] = {0};
+
+(gdb) x buf
+0xbffff4bc:	0xb7fff938
+
+(gdb) x $ebp
+0xbffff528:	0xbffff548

@@ -1,0 +1,27 @@
+> gcc -fno-stack-protector -o overflow overflow.c
+> objdump -d -M intel overflow
+            ...
+0804849b <mordor>:
+ 804849b:	55                   	push   ebp
+ 804849c:	89 e5                	mov    ebp,esp
+            ...
+
+080484b4 <echo>:
+ 80484b4:	55                   	push   ebp
+ 80484b5:	89 e5                	mov    ebp,esp
+ 80484b7:	83 ec 28             	sub    esp,0x28
+ 80484ba:	c7 45 e4 00 00 00 00 	mov    DWORD PTR [ebp-0x1c],0x0
+ 80484c1:	c7 45 e8 00 00 00 00 	mov    DWORD PTR [ebp-0x18],0x0
+ 80484c8:	c7 45 ec 00 00 00 00 	mov    DWORD PTR [ebp-0x14],0x0
+ 80484cf:	c7 45 f0 00 00 00 00 	mov    DWORD PTR [ebp-0x10],0x0
+ 80484d6:	c7 45 f4 00 00 00 00 	mov    DWORD PTR [ebp-0xc],0x0
+ 80484dd:	83 ec 0c             	sub    esp,0xc
+ 80484e0:	68 e8 85 04 08       	push   0x80485e8
+ 80484e5:	e8 76 fe ff ff       	call   8048360 <puts@plt>
+ 80484ea:	83 c4 10             	add    esp,0x10
+ 80484ed:	83 ec 08             	sub    esp,0x8
+ 80484f0:	8d 45 e4             	lea    eax,[ebp-0x1c]
+ 80484f3:	50                   	push   eax
+ 80484f4:	68 f4 85 04 08       	push   0x80485f4
+ 80484f9:	e8 92 fe ff ff       	call   8048390 <__isoc99_scanf@plt>
+            ...
