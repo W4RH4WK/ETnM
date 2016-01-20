@@ -1,0 +1,21 @@
+> gcc -g -fno-stack-protector -z execstack -o vuln vuln.c
+> readelf -a vuln
+            ...
+Program Headers:
+  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+            ...
+  GNU_EH_FRAME   0x00055c 0x0804855c 0x0804855c 0x00034 0x00034 R   0x4
+  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RW  0x10
+  GNU_RELRO      0x000f08 0x08049f08 0x08049f08 0x000f8 0x000f8 R   0x1
+            ...
+
+> gcc -g -fno-stack-protector -o vuln vuln.c
+> readelf -a vuln
+            ...
+Program Headers:
+  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+            ...
+  GNU_EH_FRAME   0x00055c 0x0804855c 0x0804855c 0x00034 0x00034 R   0x4
+  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RWE 0x10
+  GNU_RELRO      0x000f08 0x08049f08 0x08049f08 0x000f8 0x000f8 R   0x1
+            ...

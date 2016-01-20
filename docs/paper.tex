@@ -421,7 +421,7 @@ breaking ASLR, for now we focus our attention on stack smashing.
     \label{fig:stack_frame}
 \end{figure}
 
-Lets start off by examining the stack containing a buffer \texttt{c} as local
+Let's start off by examining the stack containing a buffer \texttt{c} as local
 variable, see \cref{fig:stack_frame}. Right now the buffer holds the string
 \texttt{"hello"} followed by a terminator. Since it has been allocated
 to hold a maximum of \SI{12}{\byte} this fits. If data is written to the buffer
@@ -434,7 +434,7 @@ If an attacker can provide the data written to the buffer and no (or wrong)
 bound checking is done, he is able to inject arbitrary (malicious) code into
 the stack frame. This could be, for instance, be used to overwrite a flag
 indication whether an authentication has been performed successfully or not.
-But since this is pretty forward lets go beyond that and see what happens when
+But since this is pretty forward let's go beyond that and see what happens when
 changing the return address.
 
 \begin{listing}[h!]
@@ -450,13 +450,13 @@ changing the return address.
 
 As shown in \cref{src:buffer_overflow} we have a buffer suited for
 \SI{20}{\byte} but without any bound checking. If the provided input is longer,
-we will be able to overwrite the return address. Lets have a look at the
+we will be able to overwrite the return address. Let's have a look at the
 resulting binary utilizing \texttt{objdump}.
 
 Looking at lines 13 and 23 we can infer that the buffer will start
 \SI{28}{\byte} (\texttt{0x1c}) before the base pointer. Hence we have to supply
 \SI{32}{\byte} (28 + 4) of arbitrary data followed by the address where we want
-to jump to. Lets jump into the function \texttt{mordor} located at
+to jump to. Let's jump into the function \texttt{mordor} located at
 \texttt{0x804849b}, keep in mind that the byte order needs to be swapped.
 
 \begin{code*}{linenos=false}
@@ -481,7 +481,9 @@ piece of (binary) code which opens up a shell that reads and executes commands
 from an attacker. This example is taken from Dhaval Kapil's
 blog\footnote{\url{https://dhavalkapil.com/blogs/Shellcode-Injection/} on
 December 2015} there is also a section about this in \textit{Hacking: The Art
-of Exploitation}~\cite[pp.~281]{art_of_exploitation}.
+of Exploitation}~\cite[pp.~281]{art_of_exploitation}. There is also a
+comprehensive article \cite{phrack_stack_smash} about Stack Smashing on
+\texttt{phrack}\footnote{\url{http://phrack.org/}}.
 
 \subsection{Crafting Shell Code}
 
@@ -554,7 +556,7 @@ a viable option, here we just went with the original example.
     \label{fig:shell_code}
 \end{figure}
 
-Lets first calculate the distance between the start of the buffer and the
+Let's first calculate the distance between the start of the buffer and the
 return address. The return address will be located \SI{4}{\byte} after the
 saved base pointer location.
 
@@ -576,6 +578,45 @@ by hitting return a few times. You can enter commands and receive output like
 usual.
 
 \section{Data Execution Prevention (DEP)}
+
+The first mitigation technique discussed, DEP, is also known under the term
+\textit{write XOR execute (\texttt{w\^{}x})} and it will prevent us from
+executing injected code like we did in the shell code example previously. This
+happens by attaching a execute flag to each page (in addition to the read /
+write flags). If the instruction pointer points to a page without the execute
+flag set, a segmentation fault will be triggered. The only pages flagged for
+execution are the ones that belong either to the \texttt{.text} segment or the
+used libraries since it will contain the program code. The stack is (of course)
+not executable per default. So our shell code example would simply segfault.
+
+On modern platforms this is enforced by hardware, but even CPUs that lack such
+hardware support, software-enforced DEP provides limited
+protection.~\cite{wiki:dep}
+
+Previously we worked around this by passing \texttt{-z execstack}, hence data
+on the stack was executable. This can also be seen in the output of
+\texttt{readelf}.
+
+\begin{listing}[h!]
+    \codefile{../src/shell_code/vuln_readelf.txt}
+    \caption{\texttt{readelf} output with and without \texttt{-z execstack}}
+    \label{src:dep_readelf}
+\end{listing}
+
+\begin{listing}[h!]
+    \codefile{../src/shell_code/run_dep.txt}
+    \caption{Running the shell code example without \texttt{-z execstack}}
+    \label{src:dep_shell_code}
+\end{listing}
+
+\Cref{src:dep_readelf} shows that with \texttt{-z execstack} the stack section
+is marked (looking at \texttt{Flg} in lines 8 and 19) with execute
+(\texttt{E}). Running the example, see \cref{src:dep_shell_code}, yields the
+segfault described in the previous paragraph. The program is terminated upon
+receiving the segfault.
+
+DEP makes injection arbitrary code into binary much harder, but we still
+control the return address.
 
 \section{Return Oriented Programming (ROP)}
 
