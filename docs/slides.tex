@@ -242,18 +242,18 @@
         \begin{column}{0.5\textwidth}
             \pause
             \begin{code*}{linenos=false}
-                > echo foobar | ./main
+                > echo foobar | ./format
                 You entered:
                 foobar
             \end{code*}
             \bigskip\pause
             \begin{code*}{linenos=false}
-                > echo AAAABBBB | ./main
+                > echo AAAABBBB | ./format
                 correct
             \end{code*}
             \bigskip\pause
             \begin{code*}{linenos=false}
-                > echo '%08x' | ./main
+                > echo '%08x' | ./format
                 You entered:
                 bfd98ed4
             \end{code*}
@@ -666,18 +666,18 @@
     \sidenote{- \url{http://0x90.at/post/gdb-stack-script}}
     \begin{columns}
         \begin{column}{0.5\textwidth}
-            \cfile[xleftmargin=0.8cm]{../canary/main.c}
+            \cfile[xleftmargin=0.8cm]{../src/canary/vuln.c}
             \begin{code*}{linenos=false,xleftmargin=0.8cm}
                 > gcc --version
                 gcc (Ubuntu 5.2.1-22ubuntu2) 5.2.1 20151010
                   ...
-                > gcc -g -o main main.c
+                > gcc -g -o vuln vuln.c
             \end{code*}
         \end{column}
         \pause
         \begin{column}{0.5\textwidth}
             \begin{code*}{linenos=false}
-                > gdb ./main
+                > gdb ./vuln
                 AAAAAAA
                   ...
                 Breakpoint 1, 0x0000000000400671 in fun ()
@@ -892,10 +892,10 @@
 \begin{frame}[t,fragile]{Hijack Example (last year)}
     \begin{columns}
         \begin{column}{0.75\textwidth}
-            \cfile[xleftmargin=0.8cm,firstline=8,lastline=26]{../hijack/main.c}
+            \cfile[xleftmargin=0.8cm,firstline=8,lastline=26]{../src/hijack/hijack.c}
         \end{column}
         \begin{column}{0.25\textwidth}
-            \cfile[xleftmargin=0.8cm,firstline=28,lastline=42]{../hijack/main.c}
+            \cfile[xleftmargin=0.8cm,firstline=28,lastline=42]{../src/hijack/hijack.c}
         \end{column}
     \end{columns}
 \end{frame}

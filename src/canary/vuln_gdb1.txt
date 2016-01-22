@@ -1,0 +1,23 @@
+> gcc -g -o vuln vuln.c
+> gdb -q ./vuln
+(gdb) break 6
+        ...
+
+(gdb) run
+        ...
+AAAAAAA
+
+Breakpoint 1, fun () at vuln.c:7
+7	    puts(buf);
+
+(gdb) show-stack 
+------------------------
+0xbffff540: 0x00000003
+0xbffff544: 0x41414141 (buf)
+0xbffff548: 0x0a414141
+0xbffff54c: 0xe141de00 (CANARY)
+    (padding)
+    (padding)
+0xbffff558: 0xbffff568 (Saved RBP)
+0xbffff55c: 0x0804852d (Saved RIP)
+------------------------

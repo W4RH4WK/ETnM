@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -e
+
+# build hijack
+gcc -o hijack hijack.c
+
+# run
+./hijack

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -e
+
+# build vuln
+gcc -g -o vuln vuln.c
+
+# run in gdb
+gdb -q ./vuln

@@ -1,0 +1,26 @@
+> objdump -d -M intel /bin/cat | grep -B5 ret
+            ...
+ 804a3f2:	89 f0                	mov    eax,esi
+ 804a3f4:	5b                   	pop    ebx
+ 804a3f5:	5e                   	pop    esi
+ 804a3f6:	5f                   	pop    edi
+ 804a3f7:	5d                   	pop    ebp
+ 804a3f8:	c3                   	ret    
+--
+            ...
+ 804bff7:	6a 00                	push   0x0
+ 804bff9:	ff 74 24 1c          	push   DWORD PTR [esp+0x1c]
+ 804bffd:	ff 74 24 1c          	push   DWORD PTR [esp+0x1c]
+ 804c001:	e8 3a ff ff ff       	call   804bf40 <__sprintf_chk@plt+0x2cf0>
+ 804c006:	83 c4 1c             	add    esp,0x1c
+ 804c009:	c3                   	ret    
+--
+            ...
+ 804c5fd:	29 d8                	sub    eax,ebx
+ 804c5ff:	83 c4 04             	add    esp,0x4
+ 804c602:	83 c0 01             	add    eax,0x1
+ 804c605:	5b                   	pop    ebx
+ 804c606:	5e                   	pop    esi
+ 804c607:	c3                   	ret    
+--
+            ...

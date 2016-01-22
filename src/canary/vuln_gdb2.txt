@@ -1,0 +1,23 @@
+> # no need to compile again
+> gdb -q ./vuln
+(gdb) break 6
+        ...
+
+(gdb) run
+        ...
+BBBBBBB
+
+Breakpoint 1, fun () at vuln.c:7
+7	    puts(buf);
+
+(gdb) show-stack 
+------------------------
+0xbffff540: 0x00000003
+0xbffff544: 0x42424242 (buf)
+0xbffff548: 0x0a424242
+0xbffff54c: 0x66bbf600 (CANARY)
+    (padding)
+    (padding)
+0xbffff558: 0xbffff568 (Saved RBP)
+0xbffff55c: 0x0804852d (Saved RIP)
+------------------------

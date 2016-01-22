@@ -36,7 +36,7 @@
 A university course at Rensselaer Polytechnic
 Institut\footnote{\url{http://rpi.edu/}} held in Spring 2015 focused on
 \textit{Modern Binary Exploitation}. They made their course material available
-on GitHub \cite{RPISEC} under the Creative Commons Attribution-NonCommercial
+on GitHub \cite{rpisec} under the Creative Commons Attribution-NonCommercial
 4.0 International
 license\footnote{\url{https://creativecommons.org/licenses/by-nc/4.0/legalcode}}.
 We reused a lot of their material in this project.
@@ -295,6 +295,7 @@ using (cdecl).
 \end{minipage}
 
 \section{Format String Exploits}
+\label{sec:format_string_exploit}
 
 The first exploitation technique we will discuss builds upon the interpretation
 of format strings. \texttt{printf} is a C function of the standard library
@@ -373,6 +374,7 @@ and following techniques. We will come back to this technique later on to show
 that \texttt{printf} enables even more sophisticated attacks.
 
 \section{Buffer Overflow}
+\label{sec:buffer_overflow}
 
 The second type of exploits we'll look at is known as Buffer Overflows and as
 on may already derive from the name, this is about submitting more data to a
@@ -620,12 +622,256 @@ control the return address.
 
 \section{Return Oriented Programming (ROP)}
 
+The first example shown in the Buffer Overflow section
+(\cref{sec:buffer_overflow}) already illustrated the power that comes along
+with controlling the return address. In there we were able to jump to a
+completely different function upon execution. Most likely the target binary may
+not contain a function doing exactly what an attacker wants to do, by
+controlling the return address one can build a, so called, \textit{ROP chain}
+to execute (more or less) arbitrary code, which is made out of
+\textit{gadgets}.~\cite{wiki:rop,buchanan2008good,shacham2007}
+
+\subsection{Gadgets}
+
+A gadget is a (short) sequence of instructions ending with a \texttt{ret}.
+
+An attacker scavenges the target binary (and used libraries) for such sequences
+in order to combine them to build a malicious sequence of instructions. The
+size and diversity of the code base dictates the diversity of available gadgets
+and therefore the difficulty of building a specific sequence.
+
+The shell code used in this paper could be mapped to three gadgets, for
+example, if the described gadgets were available. The first one pushes the
+string \texttt{"/bin//sh"} onto the stack, the second one sets up the registers
+(arguments) and the last one calls the \texttt{execve} system call.
+
+The final \texttt{ret} statement of a gadgets is required for chaining them
+together. We not only use the Buffer Overflow to control one, but multiple
+return addresses. Because of this our payload will be made up by a list of
+return addresses (the start of each gadgets) interleaved by some padding. Each
+provided address will be consumed one by one at the end of each gadgets to
+\emph{jump} to the next one.
+
+\begin{listing}[h!]
+    \codefile{../src/return_oriented_programming/gadgets.txt}
+    \caption{Finding available gadgets in a binary}
+    \label{src:rop_gadgets}
+\end{listing}
+
+The easiest way to find what gadgets are available may be by piping the output
+of \texttt{objdump} to \texttt{grep} filtering for \texttt{ret} statements.
+This is done in \cref{src:rop_gadgets}. In there you can see three possible
+gadgets with different instructions. Gadgets can of course be arbitrary long,
+we just used a length of 5 instructions for this example.
+
+There are algorithms and tools available which simplify the process of finding
+such gadgets (and even whole chains) but they go beyond the scope of this
+writing.~\cite{shacham2007}
+
+\subsection{Example}
+
+This example is taken from a blog
+post\footnote{\url{http://codearcana.com/posts/2013/05/28/introduction-to-return-oriented-programming-rop.html}}
+on Code Arcana, which also includes a simpler as well as a more complex example
+about ROP.
+
+\begin{listing}[h!]
+    \cfile{../src/return_oriented_programming/rop.c}
+    \caption{Example for exploiting a Buffer Overflow with ROP}
+    \label{src:rop_example}
+\end{listing}
+
+The target program is displayed in \cref{src:rop_example}. We will not be able
+to inject and execute shell code, and there is no function present which
+directly opens up a shell for us. But there are parts which can be used to do
+so.
+
+\newpage
+
+% TODO
+
 \section{Address Space Layout Randomization (ASLR)}
+
+This mitigation technique was introduced to render ROP (and ret2libc) void. The
+idea behind it is quite simple, and the name gives it away already. Memory
+layout is randomize so an attacker cannot reliably use ROP. An attacker will
+not be able to copy the exact setup of a target machine by only knowing which
+binary (and libraries) is used.
+
+\begin{listing}[h!]
+    \begin{code}
+        > echo 2 > /proc/sys/kernel/randomize_va_space
+
+        > cat /proc/self/maps
+        08048000-08054000 r-xp 00000000 08:01 131085     /bin/cat
+        08054000-08055000 r--p 0000b000 08:01 131085     /bin/cat
+        08055000-08056000 rw-p 0000c000 08:01 131085     /bin/cat
+        091de000-091ff000 rw-p 00000000 00:00 0          [heap]
+        b7531000-b76e5000 r-xp 00000000 08:01 917531     /lib/i386-linux-gnu/libc-2.21.so
+        b76f7000-b7719000 r-xp 00000000 08:01 917507     /lib/i386-linux-gnu/ld-2.21.so
+        bfe0d000-bfe2e000 rw-p 00000000 00:00 0          [stack]
+
+        > cat /proc/self/maps
+        08048000-08054000 r-xp 00000000 08:01 131085     /bin/cat
+        08054000-08055000 r--p 0000b000 08:01 131085     /bin/cat
+        08055000-08056000 rw-p 0000c000 08:01 131085     /bin/cat
+        093e3000-09404000 rw-p 00000000 00:00 0          [heap]
+        b7560000-b7714000 r-xp 00000000 08:01 917531     /lib/i386-linux-gnu/libc-2.21.so
+        b7726000-b7748000 r-xp 00000000 08:01 917507     /lib/i386-linux-gnu/ld-2.21.so
+        bf962000-bf983000 rw-p 00000000 00:00 0          [stack]
+
+        > cat /proc/self/maps
+        08048000-08054000 r-xp 00000000 08:01 131085     /bin/cat
+        08054000-08055000 r--p 0000b000 08:01 131085     /bin/cat
+        08055000-08056000 rw-p 0000c000 08:01 131085     /bin/cat
+        094ec000-0950d000 rw-p 00000000 00:00 0          [heap]
+        b7588000-b773c000 r-xp 00000000 08:01 917531     /lib/i386-linux-gnu/libc-2.21.so
+        b774e000-b7770000 r-xp 00000000 08:01 917507     /lib/i386-linux-gnu/ld-2.21.so
+        bfb24000-bfb45000 rw-p 00000000 00:00 0          [stack]
+    \end{code}
+    \caption{Let \texttt{cat} show its memory mappings with ASLR enabled (some
+lines have been omitted)}
+    \label{src:aslr_cat}
+\end{listing}
+
+ASLR is enabled by default and one can easily check the implications by running
+\texttt{cat} on \texttt{/proc/self/maps} a few times as shown in
+\cref{src:aslr_cat}. Line 10, 19 and 28 show, for example, that the stack
+starts at different locations in memory each time cat has been invoked.
+
+We can directly see one flaw in this setup --- not all sections of the
+\texttt{cat} binary start at random locations. Especially the \texttt{.text}
+always starts at the same position. This happens because \texttt{cat} itself
+was not compiled as Position Independent Executable (PIE). Since this is
+actually the default behaviour, most programs' \texttt{.text} segment will
+always start at the same location. One could pass the corresponding flag
+(\texttt{-pie}) to the compiler to prevent this, then ASLR would be able to
+randomize these segments too.
+
+Breaking ASLR, even when the code is compiled with \texttt{-pie}, is easier
+than it seems at first. Relocation only happens to a section at whole, inside a
+section still shares the same relative distance as it would without ASLR. But
+before exploit this fact have a look at the randomize addresses again.
+
+Only three nybble ($3 \times \SI{4}{\bit}$) differ between multiple runs giving
+us $2^{12} = 4096$ possibilities. If the scenario allows it, brute forcing is a
+viable option here. But note that this changes drastically for \SI{64}{\bit}.
 
 \subsection{Info Leak}
 \label{sub:info_leak}
 
-\section{Stack Cookies}
+Nevertheless a better option has already been teased. ASLR can be broken easily
+as soon as we get \emph{one} address (pointer) to a section of interest is
+\emph{leaked}. Therefore the name information leak. We show the implications of
+such a leak by an example taken from \cite{rpisec}.
+
+\begin{quote}
+    Lets say you managed to leak a pointer (\texttt{0xb7e72280}) and you know
+    that this one usually points to \texttt{printf}.
+    \medskip
+
+    Look how far away \texttt{system} is from \texttt{printf}, in the standard
+    library. It's \texttt{0xd0f0} bytes.
+    \medskip
+
+    We now know that \texttt{system} is at:
+    \[ \mathtt{0xb7e72280} - \mathtt{0xd0f0} = \mathtt{0xb7e65190} \]
+\end{quote}
+
+In case you may wonder how easy it is to leak information like a pointer, this
+already happened to us as side effect back at the format string example
+(\cref{sec:format_string_exploit}).
+
+The adaptation for the exploit we were using looks as follows. First, manage to
+leak a pointer somehow which enables you to calculate the address offset
+introduced by ASLR. Augment your ROP chain to take the offset into account. Run
+the exploit. Since this rather simple and we already gave an example how to
+calculate the offset, we would like to leave this as an exercise for the
+reader.
+
+Adapt the target file used in the ROP example by printing the address of
+\texttt{printf} first and then read in the payload via \texttt{stdin}. This way
+you can first simulate a leaked pointer, adapt the ROP chain and run it. Double
+check the distances between functions in the libraries, they may not correlate
+with the ones used in this writeup.
+
+\section{StackGuard}
+
+DEP can be fooled by ROP and ASLR is rendered useless with a simple info leak.
+Something else is required at this point. Thinking back, the original
+vulnerability was the overwrite of the return address located on the stack. Two
+(additional) counter mechanisms were introduced going by the names StackGuard
+and StackShield. We will take only a look at StackGuard and one relative common
+scenario to break it, but there is a comprehensive article
+\cite{phrack_stack_guard} on \texttt{phrack}\footnote{\url{http://phrack.org/}}
+describing and breaking both techniques.
+
+The general idea behind StackGuard is to place \emph{something} before the
+return address which \emph{guards} against buffer overflows. This
+\emph{something} known as a Canary and comes in different forms.
+
+\begin{description}
+    \item[Terminator] A terminator Canary contains a sequence of commonly used
+        terminator symbols (like null, EOF, linefeed, \dots) to
+        \emph{terminate} most string operations. Hence the return address will
+        not be overwritten.
+    \item[Random] A random Canary is chosen at program start and stored
+        \textit{somewhere save} and pushed into the stack upon function calls
+        to \emph{guard} the return address. The canary on the stack is checked
+        against the one stored save before issuing the return. The program is
+        terminated upon mismatch. With this setup an attacker has to know the
+        canary in order to overwrite the return address. Since it is chosen at
+        random when the program starts, he cannot reliably reproduce the same
+        canary in his cloned setup.
+
+        In our case the original canary will be stored in one of the segment
+        registers\footnote{\url{https://en.wikipedia.org/w/index.php?title=X86_memory_segmentation&oldid=697253060}
+        see \textit{Later developments}}.
+\end{description}
+
+There is also the random XOR Canary which XORs the random Canary with the
+return address before placing it on the stack. ``This is effectively encryption
+of the return address with the random canary of this
+function.''~\cite{phrack_stack_guard}
+
+The practical approach is taken next by looking at the stack frame of a
+vulnerable function when compiled without \texttt{-fno\_stack\_protector}.
+
+\begin{listing}[h!]
+    \begin{minipage}[t]{0.32\textwidth}
+        \cfile{../src/canary/vuln.c}
+    \end{minipage}
+    \begin{minipage}[t]{0.33\textwidth}
+        \codefile{../src/canary/vuln_gdb1.txt}
+    \end{minipage}
+    \begin{minipage}[t]{0.33\textwidth}
+        \codefile{../src/canary/vuln_gdb2.txt}
+    \end{minipage}
+    \caption{Examining the canary as generated by GCC}
+    \label{src:canary_gcc}
+\end{listing}
+
+As can be seen in \cref{src:canary_gcc} the buffer was not filled beyond his
+capacity to examine the Canary located in the same stack frame. A script
+created by Daniel Walter\footnote{\url{http://0x90.at/post/gdb-stack-script}}
+has been adapted slightly to display the stack together with some annotations.
+Using \texttt{"AAAAAAA\textbackslash{}n"} and
+\texttt{"BBBBBBB\textbackslash{}n"} makes the buffer clearly visible in lines
+16 and 17. The Canary can be observed in line 18.
+
+The Canary itself is composed of a terminator (null) followed by a random
+sequence of \SI{3}{\byte}. This sequence changes very time the program is run.
+Feeding more data to the buffer and overflowing it this way yields termination
+of the program. Note that the \texttt{puts} function is still called, the
+termination happens just before the return of the function.
+
+\begin{code*}{linenos=false}
+    > ./vuln <<< "AAAAAAAADEADBEEF"
+    AAAAAAAADEADBEEF
+
+    *** stack smashing detected ***: ./vuln terminated
+    Aborted (core dumped)
+\end{code*}
 
 \section{Control Flow Integrity (CFI)}
 
