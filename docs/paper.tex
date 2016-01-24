@@ -584,20 +584,21 @@ usual.
 The first mitigation technique discussed, DEP, is also known under the term
 \textit{write XOR execute (\texttt{w\^{}x})} and it will prevent us from
 executing injected code like we did in the shell code example previously. This
-happens by attaching a execute flag to each page (in addition to the read /
+happens by attaching an execute flag to each page (in addition to the read /
 write flags). If the instruction pointer points to a page without the execute
 flag set, a segmentation fault will be triggered. The only pages flagged for
-execution are the ones that belong either to the \texttt{.text} segment or the
-used libraries since it will contain the program code. The stack is (of course)
-not executable per default. So our shell code example would simply segfault.
+execution are the ones that belong either to the \texttt{.text} segment or to
+used libraries (by default) since they will contain the program code. The stack
+is (of course) not executable by default. Therefore our shell code example
+would simply segfault.
 
-On modern platforms this is enforced by hardware, but even CPUs that lack such
-hardware support, software-enforced DEP provides limited
+The execution flag is enforced by hardware on modern platforms. But for CPUs
+that lack such hardware support, software-enforced DEP provides limited
 protection.~\cite{wiki:dep}
 
-Previously we worked around this by passing \texttt{-z execstack}, hence data
-on the stack was executable. This can also be seen in the output of
-\texttt{readelf}.
+Previously we worked around this by passing \texttt{-z execstack} to the
+compiler, hence data on the stack was executable. This can also be seen in the
+output of \texttt{readelf}.
 
 \begin{listing}[h!]
     \codefile{../src/shell_code/vuln_readelf.txt}
@@ -614,43 +615,44 @@ on the stack was executable. This can also be seen in the output of
 \Cref{src:dep_readelf} shows that with \texttt{-z execstack} the stack section
 is marked (looking at \texttt{Flg} in lines 8 and 19) with execute
 (\texttt{E}). Running the example, see \cref{src:dep_shell_code}, yields the
-segfault described in the previous paragraph. The program is terminated upon
+segfault described in the previous paragraphs. The program is terminated upon
 receiving the segfault.
 
 DEP makes injection arbitrary code into binary much harder, but we still
-control the return address.
+control the return address --- so let's use it.
 
 \section{Return Oriented Programming (ROP)}
 
-The first example shown in the Buffer Overflow section
-(\cref{sec:buffer_overflow}) already illustrated the power that comes along
-with controlling the return address. In there we were able to jump to a
-completely different function upon execution. Most likely the target binary may
-not contain a function doing exactly what an attacker wants to do, by
+The first example shown in the \cref{sec:buffer_overflow} already illustrated
+the power that comes along with controlling the return address. It enabled us
+to jump to a completely different function upon execution. The target binary
+may not contain a function doing exactly what an attacker wants to do. But by
 controlling the return address one can build a, so called, \textit{ROP chain}
 to execute (more or less) arbitrary code, which is made out of
 \textit{gadgets}.~\cite{wiki:rop,buchanan2008good,shacham2007}
 
 \subsection{Gadgets}
 
-A gadget is a (short) sequence of instructions ending with a \texttt{ret}.
+A gadget is a, usually short, sequence of instructions ending with a
+\texttt{ret} instruction.
 
 An attacker scavenges the target binary (and used libraries) for such sequences
-in order to combine them to build a malicious sequence of instructions. The
-size and diversity of the code base dictates the diversity of available gadgets
-and therefore the difficulty of building a specific sequence.
+in order to combine them to build a new, malicious sequence of instructions.
+The size and diversity of the code base dictates the diversity of available
+gadgets and therefore the difficulty of building a specific sequence.
 
 The shell code used in this paper could be mapped to three gadgets, for
-example, if the described gadgets were available. The first one pushes the
-string \texttt{"/bin//sh"} onto the stack, the second one sets up the registers
-(arguments) and the last one calls the \texttt{execve} system call.
+example. The first one pushes the string \texttt{"/bin//sh"} onto the stack,
+the second one sets up the registers (arguments) and the last one calls the
+\texttt{execve} system call.
 
 The final \texttt{ret} statement of a gadgets is required for chaining them
-together. We not only use the Buffer Overflow to control one, but multiple
-return addresses. Because of this our payload will be made up by a list of
-return addresses (the start of each gadgets) interleaved by some padding. Each
-provided address will be consumed one by one at the end of each gadgets to
-\emph{jump} to the next one.
+together. We not only use the Buffer Overflow to control \emph{one}, but
+\emph{multiple} return addresses. Because of this our payload will be made up
+by a list of return addresses (the start of each gadgets) interleaved by some
+padding. Each provided address will be consumed one by one at the end of each
+gadgets to \emph{jump} to the next one. The payload may still contain data like
+\texttt{"/bin//sh"} if necessary.
 
 \begin{listing}[h!]
     \codefile{../src/return_oriented_programming/gadgets.txt}
@@ -658,11 +660,11 @@ provided address will be consumed one by one at the end of each gadgets to
     \label{src:rop_gadgets}
 \end{listing}
 
-The easiest way to find what gadgets are available may be by piping the output
-of \texttt{objdump} to \texttt{grep} filtering for \texttt{ret} statements.
-This is done in \cref{src:rop_gadgets}. In there you can see three possible
-gadgets with different instructions. Gadgets can of course be arbitrary long,
-we just used a length of 5 instructions for this example.
+One can easily get a list of available gadgets by piping the output of
+\texttt{objdump} to \texttt{grep} filtering for \texttt{ret} instructions. This
+is done in \cref{src:rop_gadgets} where three different gadgets can be
+observed. Of course each gadget can be arbitrary long, we just used a length of
+5 instructions in this example.
 
 There are algorithms and tools available which simplify the process of finding
 such gadgets (and even whole chains) but they go beyond the scope of this
@@ -676,7 +678,12 @@ on Code Arcana, which also includes a simpler as well as a more complex example
 about ROP.
 
 \begin{listing}[h!]
-    \cfile{../src/return_oriented_programming/rop.c}
+    \begin{minipage}[t]{0.4\textwidth}
+        \cfile{../src/return_oriented_programming/rop.c}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.6\textwidth}
+        \codefile[breaklines]{../src/return_oriented_programming/run.txt}
+    \end{minipage}
     \caption{Example for exploiting a Buffer Overflow with ROP}
     \label{src:rop_example}
 \end{listing}
@@ -686,9 +693,24 @@ to inject and execute shell code, and there is no function present which
 directly opens up a shell for us. But there are parts which can be used to do
 so.
 
-\newpage
+On the right hand side we see the execution of the exploit. First note that we
+no longer compile the binary with \texttt{-z execstack}. We read the locations
+of \texttt{not\_used} and \texttt{system} via \texttt{gdb} and note down the
+corresponding addresses. \texttt{objdump} is used to have a quick glance at the
+generated binary code for \texttt{vulnerable\_function} and note down the
+distance between the saved base pointer the start of the buffer too (line 17).
 
-% TODO
+Putting this together yields following payload: Starting with some
+\texttt{'A'}s to fill the buffer followed by 4 \texttt{'B'}s to overwrite the
+saved base pointer. The next part is new, we attach the address of
+\texttt{system} followed by some padding and a pointer to \texttt{not\_used}.
+
+We happily receive a shell upon running the exploit. Execution will be handed
+back to the original binary after we close the shell. Since we messed up the
+control flow with our exploit the program segfaults shortly after.
+
+This is also described as \textit{ret2libc} since we used ROP to jump to a
+function (\texttt{system}) provided by libc.
 
 \section{Address Space Layout Randomization (ASLR)}
 
@@ -737,33 +759,34 @@ lines have been omitted)}
 ASLR is enabled by default and one can easily check the implications by running
 \texttt{cat} on \texttt{/proc/self/maps} a few times as shown in
 \cref{src:aslr_cat}. Line 10, 19 and 28 show, for example, that the stack
-starts at different locations in memory each time cat has been invoked.
+starts at different locations in memory each time cat is invoked.
 
 We can directly see one flaw in this setup --- not all sections of the
 \texttt{cat} binary start at random locations. Especially the \texttt{.text}
 always starts at the same position. This happens because \texttt{cat} itself
-was not compiled as Position Independent Executable (PIE). Since this is
-actually the default behaviour, most programs' \texttt{.text} segment will
-always start at the same location. One could pass the corresponding flag
-(\texttt{-pie}) to the compiler to prevent this, then ASLR would be able to
+was not compiled as a Position Independent Executable (PIE). Since this is
+actually the default of \texttt{gcc}, most programs' \texttt{.text} segment
+will always start at the same location. One could pass the corresponding flag
+(\texttt{-pie}) to the compiler to prevent this, so ASLR would be able to
 randomize these segments too.
 
 Breaking ASLR, even when the code is compiled with \texttt{-pie}, is easier
-than it seems at first. Relocation only happens to a section at whole, inside a
-section still shares the same relative distance as it would without ASLR. But
-before exploit this fact have a look at the randomize addresses again.
+than it seems at first. Relocation only happens to a section at whole,
+functions inside a section still share the same relative distance as they would
+without ASLR. But before exploit this fact have a look at the randomized
+addresses again.
 
 Only three nybble ($3 \times \SI{4}{\bit}$) differ between multiple runs giving
 us $2^{12} = 4096$ possibilities. If the scenario allows it, brute forcing is a
 viable option here. But note that this changes drastically for \SI{64}{\bit}.
+But we won't hassle with brute force, a better option has already been teased.
 
 \subsection{Info Leak}
 \label{sub:info_leak}
 
-Nevertheless a better option has already been teased. ASLR can be broken easily
-as soon as we get \emph{one} address (pointer) to a section of interest is
-\emph{leaked}. Therefore the name information leak. We show the implications of
-such a leak by an example taken from \cite{rpisec}.
+ASLR can be broken easily as soon as \emph{one} pointer to a section of
+interest gets \emph{leaked}. Therefore the name information leak. We show the
+implications of such a leak by an example taken from \cite{rpisec}.
 
 \begin{quote}
     Lets say you managed to leak a pointer (\texttt{0xb7e72280}) and you know
@@ -778,60 +801,61 @@ such a leak by an example taken from \cite{rpisec}.
     \[ \mathtt{0xb7e72280} - \mathtt{0xd0f0} = \mathtt{0xb7e65190} \]
 \end{quote}
 
-In case you may wonder how easy it is to leak information like a pointer, this
-already happened to us as side effect back at the format string example
+In case you may wonder how easy it is to leak a pointer, this already happened
+to us as a side effect in the format string example
 (\cref{sec:format_string_exploit}).
 
-The adaptation for the exploit we were using looks as follows. First, manage to
-leak a pointer somehow which enables you to calculate the address offset
-introduced by ASLR. Augment your ROP chain to take the offset into account. Run
-the exploit. Since this rather simple and we already gave an example how to
-calculate the offset, we would like to leave this as an exercise for the
-reader.
+Our previous exploit can be adapted as follows. First, manage to leak a pointer
+somehow, which enables you to calculate the address offset introduced by ASLR.
+Augment your ROP chain to take the offset into account. Run the exploit. Since
+this is rather simple and we already gave an example how to calculate the
+offset, we would like to leave this as an exercise for the reader.
 
-Adapt the target file used in the ROP example by printing the address of
-\texttt{printf} first and then read in the payload via \texttt{stdin}. This way
-you can first simulate a leaked pointer, adapt the ROP chain and run it. Double
-check the distances between functions in the libraries, they may not correlate
+Manipulate the target file used in the ROP example to print the address of
+\texttt{printf} first, \emph{then} read in the payload via \texttt{stdin}. This
+way you can first simulate a leaked pointer, adapt the ROP chain and run it.
+Double check the distances between functions in the libraries, they may differ
 with the ones used in this writeup.
 
 \section{StackGuard}
 
 DEP can be fooled by ROP and ASLR is rendered useless with a simple info leak.
-Something else is required at this point. Thinking back, the original
-vulnerability was the overwrite of the return address located on the stack. Two
+Something else is required at this point. Thinking back, the original problem
+emerged from manipulating the return address located on the stack. Two
 (additional) counter mechanisms were introduced going by the names StackGuard
-and StackShield. We will take only a look at StackGuard and one relative common
-scenario to break it, but there is a comprehensive article
+and StackShield. We will take only a look at StackGuard and one relatively
+common scenario to break it, but there is a comprehensive article
 \cite{phrack_stack_guard} on \texttt{phrack}\footnote{\url{http://phrack.org/}}
-describing and breaking both techniques.
+describing and breaking both mechanisms.
 
 The general idea behind StackGuard is to place \emph{something} before the
-return address which \emph{guards} against buffer overflows. This
-\emph{something} known as a Canary and comes in different forms.
+return address which \emph{guards} against overwriting the return address via a
+buffer overflow. This \emph{something} is known as a canary and comes in
+different forms.
 
 \begin{description}
-    \item[Terminator] A terminator Canary contains a sequence of commonly used
+    \item[Terminator] A terminator canary contains a sequence of commonly used
         terminator symbols (like null, EOF, linefeed, \dots) to
-        \emph{terminate} most string operations. Hence the return address will
-        not be overwritten.
-    \item[Random] A random Canary is chosen at program start and stored
-        \textit{somewhere save} and pushed into the stack upon function calls
-        to \emph{guard} the return address. The canary on the stack is checked
-        against the one stored save before issuing the return. The program is
-        terminated upon mismatch. With this setup an attacker has to know the
-        canary in order to overwrite the return address. Since it is chosen at
-        random when the program starts, he cannot reliably reproduce the same
-        canary in his cloned setup.
+        \emph{terminate} \emph{most} string operations before they would change
+        the return address.
+
+    \item[Random] A random canary is chosen at program start, stored
+        \textit{somewhere save} and pushed into the stack upon function calls.
+        The canary on the stack is checked against the one stored before
+        executing the return instruction. The program is terminated upon
+        mismatch. With this setup an attacker has to know the canary in order
+        to overwrite the return address. Since it is chosen at random during
+        program start, an attacker cannot reliably reproduce the same canary in
+        his cloned setup.
 
         In our case the original canary will be stored in one of the segment
         registers\footnote{\url{https://en.wikipedia.org/w/index.php?title=X86_memory_segmentation&oldid=697253060}
         see \textit{Later developments}}.
 \end{description}
 
-There is also the random XOR Canary which XORs the random Canary with the
-return address before placing it on the stack. ``This is effectively encryption
-of the return address with the random canary of this
+There is also the random XOR canary which XORs the (stored) random canary with
+the return address before placing it on the stack. ``This is effectively
+encryption of the return address with the random canary of this
 function.''~\cite{phrack_stack_guard}
 
 The practical approach is taken next by looking at the stack frame of a
@@ -851,31 +875,87 @@ vulnerable function when compiled without \texttt{-fno\_stack\_protector}.
     \label{src:canary_gcc}
 \end{listing}
 
-As can be seen in \cref{src:canary_gcc} the buffer was not filled beyond his
-capacity to examine the Canary located in the same stack frame. A script
+As can be seen in \cref{src:canary_gcc} the buffer was not filled beyond its
+capacity to examine the canary located in the same stack frame. A script
 created by Daniel Walter\footnote{\url{http://0x90.at/post/gdb-stack-script}}
 has been adapted slightly to display the stack together with some annotations.
 Using \texttt{"AAAAAAA\textbackslash{}n"} and
 \texttt{"BBBBBBB\textbackslash{}n"} makes the buffer clearly visible in lines
-16 and 17. The Canary can be observed in line 18.
+16 and 17. The canary can be observed in line 18.
 
-The Canary itself is composed of a terminator (null) followed by a random
+The canary itself is composed of a terminator (null) followed by a random
 sequence of \SI{3}{\byte}. This sequence changes very time the program is run.
 Feeding more data to the buffer and overflowing it this way yields termination
-of the program. Note that the \texttt{puts} function is still called, the
-termination happens just before the return of the function.
+of the program. Note that \texttt{puts} is still executed, the termination
+happens just before the return of \texttt{fun}.
 
 \begin{code*}{linenos=false}
-    > ./vuln <<< "AAAAAAAADEADBEEF"
+    > echo AAAAAAAADEADBEEF | ./vuln
     AAAAAAAADEADBEEF
 
     *** stack smashing detected ***: ./vuln terminated
     Aborted (core dumped)
 \end{code*}
 
+\subsection{Server Worker Paradigm}
+
+Of course there are multiple paths available when trying to break the
+StackGuard mechanism, as mentioned in \cite{phrack_stack_guard}. We will now
+have a look at the common server worker paradigm. \Cref{src:server_worker}
+shows how that paradigm looks like from a task monitors view. The server /
+daemon (here \texttt{apache2}) is started with root privileges in order to
+listen on a \textit{privileged} port. After the initialization has been
+compiled the server forks itself multiple times to create a set of workers. In
+this example the workers drop their root privileges right away by changing
+their current user to \texttt{www-data}. But our focus is not on the privileges
+but the problem introduced by fork with respect to the StackGuard.
+
+\begin{listing}[h!]
+    \codefile[linenos=false]{gfx/server_worker.txt}
+    \caption{Server worker paradigm from the view of a task monitor}
+    \label{src:server_worker}
+\end{listing}
+
+Many things are copied\footnote{Actually referenced utilizing a copy-on-write
+method} over to the new process when using \texttt{fork}. The canary is copied
+too (more details at \cite{phrack_stack_guard2}). Together with the
+fact\footnote{We assume that the server wants to maintain a maximum of
+availability} that the server will fork itself again if one of its workers dies
+or crashes to keep the worker pool at its configured sized.
+
+An attacker will be able to guess the \emph{same} canary multiple times since
+the server will keep spawning workers if they crash --- even due to a stack
+smash. The attacker receives information about whether his guess was correct or
+not by whether his connection has been terminated. And now to the meat of this
+method.
+
+Have a look at \cref{src:canary_gcc} again and reexamine the canary. While
+occupying \SI{4}{\byte} only 3 of them are random --- first byte acts as a
+terminator. We have already seen via previous examples that a buffer overflow
+often allows writing to consecutive memory \emph{byte by byte}. Putting this
+information together yields following upper bound for brute forcing a canary in
+the described scenario:
+
+\begin{align*}
+    \implies 2^8 \times 3 & = 768  & \text{ guesses at most on \SI{32}{\bit}}\\
+    \implies 2^8 \times 7 & = 1792 & \text{ guesses at most on \SI{64}{\bit}}
+\end{align*}
+
+Again, this is just \emph{one} of many different ways to work around the
+StackGuard mechanism. Depending on your operating system's and compiler's
+implementation this may or may not work. We encourage the reader to try this
+technique locally with a minimal example. Running the exploit multiple times
+and recording the runtime (number of guesses) may be of interest.
+
+\newpage
+
 \section{Control Flow Integrity (CFI)}
 
+\newpage
+
 \section{Other Architectures}
+
+\newpage
 
 \section{Conclusion}
 

