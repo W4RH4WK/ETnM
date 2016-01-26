@@ -1,7 +1,7 @@
 > gcc -g -fno-stack-protector -o rop rop.c
 > gdb -q ./rop
 Reading symbols from ./rop...done.
-(gdb) x/s not_used 
+(gdb) x/s not_used
 0x8048590:	"/bin/sh"
 
 (gdb) x system
