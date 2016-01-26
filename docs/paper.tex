@@ -21,15 +21,39 @@
 
 \begin{document}
 
-% \maketitle
-%
-% \section*{Abstract}
-% \label{sec:abstract}
-%
-% \setcounter{tocdepth}{1}
-% \tableofcontents
-%
-% \newpage
+\maketitle
+
+\section*{Abstract}
+\label{sec:abstract}
+
+\begin{quote}
+    When a buffer overwrites a pointer\dots\enspace The story of a restless
+    mind.
+\end{quote}
+
+Exploiting binaries is an extremely broad topic with many specialized
+techniques for even the most exotic scenarios. In this writeup we will take a
+look at exploiting \texttt{printf} with crafted format strings first and follow
+up with an introduction about buffer overflows. Mitigation mechanisms will be
+disabled at first and enabled one by one discussing them when they are put into
+place. The buffer overflow will be augmented to inject and execute shell code
+which is then prevented by the Data Execution Prevention (DEP) mechanism.
+
+Return Oriented Programming (ROP) is introduced together with ret2libc to
+circumvent DEP. Address Space Layout Randomization (ASLR) is presented next as
+counter to ROP but is quickly broken with an information leak. StackGuard is a
+more sophisticated mechanism against ROP but not a silver bullet and can be
+easily brute forced in certain scenarios. Control-Flow Integrity (CFI) together
+with a word about Stack Integrity is provided as an outlook for the reader.
+
+Some basic knowledge about the target platform (x86) is communicated before
+running the first exploit, but we take a quick glance at other architectures
+(x86\_64 and ARM) before concluding this writeup.
+
+\setcounter{tocdepth}{1}
+\tableofcontents
+
+\newpage
 
 \section*{Acknowledgement}
 
