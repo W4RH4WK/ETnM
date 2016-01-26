@@ -1047,6 +1047,34 @@ GitHub\footnote{\url{https://github.com/HexHive/printbf}}.
 
 \section{Conclusion}
 
+String with no mitigation mechanisms in place, we have seen how easy it is to
+manipulate the program by exploiting just one simple buffer overflow. Going
+beyond simple manipulations like changing locale variables, we craft shell code
+and injected it to open up a shell accepting and executing arbitrary inputs.
+Next, Data Execution Prevention (DEP) was presented to deny the ability of
+\emph{injecting} new code.
+
+This was countered by introducing Return Oriented Programming (DEP) (and
+ret2libc) which removes the requirement of injecting new code to exploit a
+binary. This is done by combining code fragments (gadgets) already available in
+the target binary and libraries to build new, malicious sequences of
+instructions.
+
+Address Space Layout Randomization (ASLR) can be defeated with an information
+leak and even the StackGuard mechanism can broking with brute force (including
+an unexpected low upper bound) in certain scenarios.
+
+The basic idea behind Control-Flow Integrity (CFI) was communicated after this
+followed by a small glance at \texttt{printf}'s capabilities to work as an
+interpreter. Along the way references have been provided to aid the reader.
+
+Before concluding with this section a short word about other architectures and
+their influence on these techniques has been given,
+
+Happy Hacking
+
+\newpage
+
 \bibliography{references}
 
 \end{document}
