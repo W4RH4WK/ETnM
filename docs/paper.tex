@@ -120,6 +120,7 @@ may already be known to the public if the used version is not up-to-date. An
 attacker could easily reuse them.
 
 \section{Platform x86}
+\label{sec:x86}
 
 This section will teach necessary background knowledge about the target
 platform to fully conceive the following techniques. But first let us elaborate
@@ -1039,11 +1040,45 @@ A compiler accepting Brainfuck and spitting out the corresponding format
 strings, including examples can be found on HexHive's
 GitHub\footnote{\url{https://github.com/HexHive/printbf}}.
 
-\newpage
-
 \section{Other Architectures}
 
-\newpage
+We have already reasoned about why x86 was the platform chosen for all this in
+\cref{sec:x86}, but now we'll have a short look at two other common platforms.
+Most of this is directly taken from \cite{rpisec} with some smaller additions.
+
+On x86 instructions range from \SIrange{1}{15}{\byte} and one can even bend the
+instruction pointer between instructions to yield a completely different
+execution than originally available.
+
+\subsection{x86\_64}
+
+x86\_64, also known as x64 and AMD64, is at its core a \SI{64}{\bit} extension
+to x86 which already replaced a lot of x86 machines. Its general purpose
+registers are \SI{64}{\bit} wide and there are eight more of them.
+
+We will find the most interesting difference in the calling convention,
+\textit{fastcall}, where (the first few) arguments are passed via registers
+instead of pushing them onto the stack. This makes ROP much easier.
+
+Contrary, breaking ASLR gets much harder since the address space is \emph{much}
+bigger which yields more entropy for the randomization. This renders brute
+force (and heap spraying) basically useless, but we can still resort to the
+info leak. Breaking a canary via brute force gets only a little bit harder, but
+this has already been shown.
+
+\subsection{ARM}
+
+ARM CPUs will be encountered mostly in portable, low-power-oriented devices
+such as smart phones and tables, but are also used in embedded devices like
+routers. It consists of an \SI{32}{\bit} RISC instruction set with a
+\SI{16}{\bit} mode (THUMB). The used calling convention is basically the same
+as under x86\_64 (fastcall)
+
+Compared to the previous both, ARM has a \SI{4}{\byte} instruction alignment
+--- \SI{2}{\byte} under THUMB.
+
+A heads up about caching: on ARM cache has to be flushed manually (or via large
+memory operations).
 
 \section{Conclusion}
 
