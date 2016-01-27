@@ -1,5 +1,5 @@
-\usetikzlibrary{arrows.meta}
-\usetikzlibrary{shapes.multipart}
+% \usetikzlibrary{arrows.meta}
+% \usetikzlibrary{shapes.multipart}
 
 \tikzstyle{block} = [
     draw,
@@ -14,7 +14,7 @@
     rectangle split part align=base,
 ]
 
-\tikzstyle{ptr}=[
+\tikzstyle{ptr} = [
     -{Latex[length=2.7mm]}
 ]
 

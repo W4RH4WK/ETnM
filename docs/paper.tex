@@ -19,6 +19,10 @@
     autogobble,
     linenos}
 
+\usetikzlibrary{arrows.meta}
+\usetikzlibrary{positioning,shapes.geometric}
+\usetikzlibrary{shapes.multipart}
+
 \begin{document}
 
 \maketitle
@@ -33,22 +37,24 @@
 
 Exploiting binaries is an extremely broad topic with many specialized
 techniques for even the most exotic scenarios. In this writeup we will take a
-look at exploiting \texttt{printf} with crafted format strings first and follow
-up with an introduction about buffer overflows. Mitigation mechanisms will be
-disabled at first and enabled one by one discussing them when they are put into
-place. The buffer overflow will be augmented to inject and execute shell code
-which is then prevented by the Data Execution Prevention (DEP) mechanism.
+narrow look at exploiting \texttt{printf} with crafted format strings first and
+follow up with an introduction about buffer overflows. Mitigation mechanisms
+will be disabled at first and enabled one by one --- discussing them when they
+are put into place. The buffer overflow will be augmented to inject and execute
+shell code which is then prevented by the Data Execution Prevention (DEP)
+mechanism.
 
 Return Oriented Programming (ROP) is introduced together with ret2libc to
 circumvent DEP. Address Space Layout Randomization (ASLR) is presented next as
-counter to ROP but is quickly broken with an information leak. StackGuard is a
-more sophisticated mechanism against ROP but not a silver bullet and can be
+counter to ROP but gets quickly broken with an information leak. StackGuard is
+a more sophisticated mechanism against ROP but not a silver bullet and can be
 easily brute forced in certain scenarios. Control-Flow Integrity (CFI) together
 with a word about Stack Integrity is provided as an outlook for the reader.
 
-Some basic knowledge about the target platform (x86) is communicated before
-running the first exploit, but we take a quick glance at other architectures
-(x86\_64 and ARM) before concluding this writeup.
+Although x86 has been chosen as target platform a quick glance at other
+architectures (x86\_64 and ARM) is taken prior concluding this writeup. Some
+basics about the target platform will be communicated before running the first
+exploit.
 
 \setcounter{tocdepth}{1}
 \tableofcontents
@@ -979,36 +985,33 @@ but before that we need to talk about the Control-Flow Graph (CFG).
 
 \subsection{Control-Flow Graph (CFG)}
 
-Again the name already tells you what this is about, a direct acyclic graph
-(DAG) that reflects the control-flow of your program. There are different
-definitions regarding what is actually placed in the nodes of the graph and
-what are the anchor points of the program used to connect them. In our case we
-will create a node out of each function body and connect them at function
-calls.
+Again the name already tells you what this is about, a directed graph that
+reflects the control-flow of a program. Different definitions exist regarding
+what is actually used to compose a node and anchor them together.In our case we
+will create a node out of each function and connect them at function calls.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{gfx/unraid_part_graph.png}
-    \caption{Truncated control-flow graph example}
+    \input{gfx/control_flow_graph.tikz}
+    \caption{Control-flow graph example}
     \label{fig:cfg}
 \end{figure}
 
-\Cref{fig:cfg} shows part of such a graph in
-IDA\footnote{\url{https://www.hex-rays.com/products/ida/}} analyzing the
-\texttt{emhttp} binary used by
-unRAID\footnote{\url{http://lime-technology.com/what-is-unraid/}}. There are
-much nicer graphs available to explain the concept, but we wanted to inject
-some real world data. From the graph you can already tell that the function
-(subroutine) labeled \texttt{licensing} will call \texttt{malloc},
-\texttt{memset}, \texttt{USB\_STUFF}, \dots. Thats actually all we care about
-for now.
+\Cref{fig:cfg} shows an example of such a graph. From this graph you can tell
+that \texttt{funB} will be called from \texttt{funA} and \texttt{funE} but not,
+for instance, from \texttt{funD}. This is all we care about right now. Note
+that contrary to some definitions this graph is not acyclic since we also model
+direct and indirect recursion as can be seen by $\texttt{funC} \to
+\texttt{funC}$ and $\texttt{funcB} \to \texttt{funcD} \to \texttt{funcE} \to
+\texttt{funcB}$ respectively.
 
 \subsection{Back to CFI}
 
 CFI is a big topic and, like other topics already mentioned, goes beyond the
-scope of this writeup. The first pointer we will hand you aims at corresponding
+scope of this writeup. The first pointer we will hand the reader aims at the
+corresponding
 section\footnote{\url{http://clang.llvm.org/docs/ControlFlowIntegrity.html}} of
-the Clang documentation, but we encourage you to checkout the related research
+the Clang documentation, but we recommend checking out the related research
 paper \cite{ms_cfi} for more information. A more accessible and recent way to
 this topic may be the
 talk\footnote{\url{https://www.youtube.com/watch?v=FA0VK7s5tSQ}} \textit{New
@@ -1021,16 +1024,15 @@ is available and can be used to create additional constraints which the program
 must obey during runtime. This is similar to the StackGuard mechanism where we
 attach code to the end of a function which checks if the canary is still
 intact. But now we don't check for a canary but for the validity of the return
-address. From the CFG we can build a set of possible return targets for each
-function. Looking back at the example shown in \cref{fig:cfg} we can determine
-that the function \texttt{szDecrypt} returns either to \texttt{USB\_STUFF},
-\texttt{licensing} or one other subroutine excluded by the illustration. The
-corresponding addresses are put into this set which is then stored in the
-binary. Before the function \texttt{szDecrypt} returns the return address on
-the stack is compared to the entries listed in the corresponding set. If no
-match can be found, the program terminates.
+address directly. From the CFG we can build a set of possible return targets
+for each function. Looking back at the example shown in \cref{fig:cfg} we can
+determine that \texttt{funB} returns either to \texttt{funA} or \texttt{funE}.
+The corresponding addresses are put into this set which is then stored in the
+binary. Before \texttt{funB} returns the return address on the stack is
+compared to the entries listed in the corresponding set. If no match can be
+found, the program terminates.
 
-With this mechanism setup, one can easily see that it is no longer possible
+With this mechanism setup, one can easily see that it is no longer possible to
 chain \emph{arbitrary} gadgets together to pull off ROP. But we still control
 the return address and can jump to different locations as long as we stick to
 the CFG. Each transition from one node to another has to be valid, while the
@@ -1042,10 +1044,10 @@ program's author. This concept is known as control-flow bending.~
 
 Using a changed return address is what ultimately enables control-flow bending.
 Stack integrity ensures that the same return address is used upon executing the
-\texttt{ret} instruction as was pushed upon function call. This can be achieved
-by using a \textit{shadow-stack} similar to the StackShield mechanism but we
-suggest reading about \textit{code-pointer integrity} \cite{cpi} regarding this
-topic.
+\texttt{ret} instruction as was pushed upon that very function call. This can
+be achieved by using a \textit{shadow-stack} similar to the StackShield
+mechanism but we suggest reading about \textit{code-pointer integrity}
+\cite{cpi} regarding this topic.
 
 \subsection{There is an interpreter in your C}
 
@@ -1057,7 +1059,7 @@ further and craft a format string mimicking each of the eight operators of
 Brainfuck\footnote{\url{https://en.wikipedia.org/wiki/Brainfuck}}. Because
 Brainfuck is Turing complete we can deduce that \texttt{printf} is a Turing
 complete interpreter. Note that this requires \texttt{printf} to be called in a
-loop and the format strings may depend heavily on your libraries
+loop and the format strings may depend heavily on your library's
 implementation. (Also not all implementation are Turing complete).
 
 A compiler accepting Brainfuck and spitting out the corresponding format
@@ -1076,59 +1078,62 @@ execution than originally available.
 
 \subsection{x86\_64}
 
-x86\_64, also known as x64 and AMD64, is at its core a \SI{64}{\bit} extension
-to x86 which already replaced a lot of x86 machines. Its general purpose
-registers are \SI{64}{\bit} wide and there are eight more of them.
+x86\_64, also known as x64 and AMD64, is, at its core, a \SI{64}{\bit}
+extension to x86 which already replaced a lot of x86 machines. Its general
+purpose registers are \SI{64}{\bit} wide and there are eight more of them.
 
 We will find the most interesting difference in the calling convention,
 \textit{fastcall}, where (the first few) arguments are passed via registers
 instead of pushing them onto the stack. This makes ROP much easier.
 
-Contrary, breaking ASLR gets much harder since the address space is \emph{much}
-bigger which yields more entropy for the randomization. This renders brute
-force (and heap spraying) basically useless, but we can still resort to the
-info leak. Breaking a canary via brute force gets only a little bit harder, but
-this has already been shown.
+Contrary, breaking ASLR by brute force gets much harder since the address space
+is \emph{much} bigger which yields more entropy for the randomization. Similar
+techniques like \textit{heap spraying} basically useless, but we can still
+resort to the info leak. Breaking a canary via brute force gets only a little
+bit harder, but this has already been shown in an example.
 
 \subsection{ARM}
 
-ARM CPUs will be encountered mostly in portable, low-power-oriented devices
-such as smart phones and tables, but are also used in embedded devices like
-routers. It consists of an \SI{32}{\bit} RISC instruction set with a
-\SI{16}{\bit} mode (THUMB). The used calling convention is basically the same
-as under x86\_64 (fastcall)
+ARM CPUs will be encountered mostly in portable, low-power oriented devices
+such as smart phones and tables, but are also found in embedded devices like
+routers. They consist of a \SI{32}{\bit} RISC instruction set with a
+\SI{16}{\bit} mode (known as THUMB mode). The used calling convention is
+basically the same as under x86\_64 (fastcall), arguments are passed via
+registers.
 
 Compared to the previous both, ARM has a \SI{4}{\byte} instruction alignment
---- \SI{2}{\byte} under THUMB.
+(\SI{2}{\byte} under THUMB).
 
 A heads up about caching: on ARM cache has to be flushed manually (or via large
 memory operations).
 
 \section{Conclusion}
 
-String with no mitigation mechanisms in place, we have seen how easy it is to
+Starting with no mitigation mechanisms in place, we have seen how easy it is to
 manipulate the program by exploiting just one simple buffer overflow. Going
 beyond simple manipulations like changing locale variables, we craft shell code
 and injected it to open up a shell accepting and executing arbitrary inputs.
 Next, Data Execution Prevention (DEP) was presented to deny the ability of
 \emph{injecting} new code.
 
-This was countered by introducing Return Oriented Programming (DEP) (and
+This was countered by introducing Return Oriented Programming (ROP) (and
 ret2libc) which removes the requirement of injecting new code to exploit a
 binary. This is done by combining code fragments (gadgets) already available in
 the target binary and libraries to build new, malicious sequences of
 instructions.
 
-Address Space Layout Randomization (ASLR) can be defeated with an information
-leak and even the StackGuard mechanism can broking with brute force (including
-an unexpected low upper bound) in certain scenarios.
+Address Space Layout Randomization (ASLR) was established to prevent ROP but
+can be defeated with an information leak. Even the StackGuard mechanism can be
+broking with brute force (including an unexpected low upper bound) in certain
+scenarios.
 
-The basic idea behind Control-Flow Integrity (CFI) was communicated after this
+The basic idea behind Control-Flow Integrity (CFI) was communicated after that
 followed by a small glance at \texttt{printf}'s capabilities to work as an
-interpreter. Along the way references have been provided to aid the reader.
+interpreter. Along the way references and various outlooks have been provided
+to aid the reader.
 
 Before concluding with this section a short word about other architectures and
-their influence on these techniques has been given,
+their implications on the presented techniques has been given,
 
 Happy Hacking
 

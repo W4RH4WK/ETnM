@@ -1,0 +1,37 @@
+% \usetikzlibrary{arrows.meta}
+% \usetikzlibrary{positioning,shapes.geometric}
+
+\tikzstyle{block} = [
+    draw,
+    align=center,
+    rectangle,
+    minimum height=0.8cm,
+    minimum width=1.6cm
+]
+
+\tikzstyle{ptr} = [
+    -{Latex[length=2.7mm]}
+]
+
+\tikzstyle{loop} = [
+    ptr,
+    looseness=10,
+]
+
+\begin{tikzpicture}
+    \node[block] (1)                                              {\texttt{funA}};
+    \node[block] (2) [below=of 1]                                 {\texttt{funB}};
+    \node[block] (4) [node distance=1cm and 3mm, below left=of 2] {\texttt{funD}};
+    \node[block] (3) [left=of 4]                                  {\texttt{funC}};
+    \node[block] (5) [below=of 4]                                 {\texttt{funE}};
+    \node[block] (6) [node distance=1cm, right=of 5]              {\texttt{funF}};
+
+    \path[ptr] (1) edge                  (2)
+               (2) edge                  (3)
+               (2) edge                  (4)
+               (2) edge                  (6)
+               (3) edge                  (5)
+               (3) edge[loop above]      (3)
+               (4) edge                  (5)
+               (5) edge[bend right=20pt] (2);
+\end{tikzpicture}
