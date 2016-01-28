@@ -72,15 +72,15 @@ license\footnote{\url{https://creativecommons.org/licenses/by-nc/4.0/legalcode}}
 We reused a lot of their material in this project.
 
 We highly recommend checking them out and having a look at their material for
-further details apart from the given references.
+further details, apart from the given references.
 
 \section{Introduction}
 
 Exploiting binaries was comparatively easy ten to fifteen years ago. There were
 no special mitigation mechanisms in place denying even the most simplest
 exploits. This is the point in time where we will start off. First we talk
-about two very simple exploits, namely the Format String Exploit and the Buffer
-Overflow in combination with Shell Code. Although there is a huge collection of
+about two very simple exploits, namely the format string exploit and the buffer
+overflow in combination with shell code. Although there is a huge collection of
 exploitation techniques known to the public, we will only look at a very small
 fraction of them in this project.
 
@@ -91,38 +91,39 @@ architecture x86 will be given.
 After that, both techniques are introduced, followed by the first mitigation
 technique, Data Execution Prevention (DEP). From there on we will keep on using
 the buffer overflow technique with some adaptations to circumvent DEP. At that
-point Return Oriented Programming (ROP) is introduced, directly leads to
-Address Space Layout Randomization (ASLR) the follow-up mitigation mechanism.
-Again the buffer overflow technique can be adapted to break ASLR through the
-use of additional information.
+point Return Oriented Programming (ROP) is introduced, which directly leads us
+to Address Space Layout Randomization (ASLR), the follow-up mitigation
+mechanism. Again, the buffer overflow can be adapted to break ASLR through the
+use of additional information (info leak).
 
 Since neither DEP nor ASLR provide significant protection against even this
 simple technique, an additional mitigation has been put into place in the form
-of Stack Cookies.
+of stack cookies (StackGuard).
 
-An outlook will be given after bypassing Stack Cookies by looking at Control
-Flow Integrity (CFI).
+An outlook will be given after bypassing StackGuard by looking at Control-Flow
+Integrity (CFI).
 
-Examples will be provided along the way support the reader and provide some
-additional explanation. Finally we will conclude with a word about other
-architectures (x86\_64 and ARM) followed by a recap about this project.
+Examples will be provided along the way to support the reader and provide
+additional explanations. Finally we will conclude with a word about other
+architectures (x86\_64 and ARM) followed by a short recap about what has been
+taught in this writeup.
 
 \subsection{Main Assumption}
 
-Throughout this work we assume that we know the target binary (and the
-libraries it uses). Let us show that this assumption is quite reasonable to
-make by looking through the eyes of the adversary. An attacker who wants to
-penetrate a target machine would most likely choose the easiest path, by
-exploiting the weakest link. Most machines relevant to an attacker's interest
-will provide multiple services. Consider following scenario:
+Throughout this work we assume that we know the target binary (and the used
+libraries). Let us show that this assumption is quite reasonable to make by
+looking through the eyes of the adversary. An attacker who wants to penetrate a
+target machine would most likely choose the easiest path --- exploiting the
+weakest link. Most machines relevant to an attacker's interest will provide
+multiple services. Consider following scenario:
 
 The main server of a small business company runs a homemade communication
 service for interaction between them and their clients. The attacker has no
 access to the source or binary of this communication service's daemon running
-on the target machine. But along with it a commonly used web server is
+on the target machine. But, along with it, a commonly used web server is
 listening on port 80. Getting the source (and binary) of the web server is much
-easier therefore an attacker would pick this entry point over the communication
-service daemon.
+easier, therefore an attacker would pick this entry point over the
+communication service daemon.
 
 \begin{listing}[h!]
     \begin{code*}{linenos=false}
@@ -147,7 +148,7 @@ receiving an invalid request. The web server tells us his exact version and
 since it also provides information about the operating system (distribution) an
 attacker can easily mimic this setup to test and tweak his exploits. Exploits
 may already be known to the public if the used version is not up-to-date. An
-attacker could easily reuse them.
+attacker can use, modify and build upon them.
 
 \section{Platform x86}
 \label{sec:x86}
@@ -157,13 +158,13 @@ platform to fully conceive the following techniques. But first let us elaborate
 why x86 has been chosen.
 
 At the time these techniques (and their related mitigations) were established,
-x86 was the most common platform. The majority of related material found on the
-internet covers x86, and many exploitation techniques can be translated from
+x86 was the most common computing platform. The majority of related material
+found on the internet covers x86, and many techniques can be translated from
 x86 to other architectures with ease.
 
 A more detailed overview can be found on
-Wikipedia\footnote{\url{https://en.wikipedia.org/wiki/X86}} and if this is not
-enough for you, consider the Intel
+Wikipedia\footnote{\url{https://en.wikipedia.org/wiki/X86}} and --- if this is
+not enough --- consider the Intel
 Manual\footnote{\url{https://www-ssl.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html}}
 for a more profound insight.
 
@@ -176,10 +177,10 @@ for a more profound insight.
     \label{fig:registers}
 \end{figure}
 
-\Cref{fig:registers} (from
+\Cref{fig:registers} (taken from
 Wikipedia\footnote{\url{https://en.wikipedia.org/w/index.php?title=X86&oldid=696308590\#/media/File:Table_of_x86_Registers_svg.svg}})
 shows an overview of registers available on the x86 platform. While there are
-dedicated registers for floating pointer operations and registers with hardware
+dedicated registers for floating-point operations and registers with hardware
 protection (segment registers) we will only focus on nine commonly used
 registers.
 
@@ -207,63 +208,62 @@ registers.
 \bigskip
 
 The instruction pointer \texttt{EIP} points to the next instruction in memory
-which will be executed the subsequent cycle. Stack pointer \texttt{ESP} and
+which will be executed on the subsequent cycle. Stack pointer \texttt{ESP} and
 base pointer \texttt{EBP} are used for stack management which is vital to call
 and return from multiple functions properly. The remaining six registers are
 used for arithmetic and memory operations as well as passing arguments
 (parameters) for system calls. Their values can either be interpreted as
-integers or pointers.
+integer or pointer.
 
-Note that these registers can be addressed partially allowing one to write only
-to the lower \SI{16}{bit}, for example, as displayed in
-\cref{fig:single_register} taken from \textit{null
+Note that these registers can be addressed partially, allowing one to write
+only to the lower \SI{16}{\bit}, for example, as displayed in
+\cref{fig:single_register} (taken from \textit{null
 programm}\footnote{\url{http://nullprogram.com/img/x86/register.png} on
-December 2015}.
+December 2015}).
 
-The CPU comes with protection mechanisms which allows the operating system
+The CPU comes with protection mechanisms which allows the operating system's
 kernel to limit other processes' privileges. This mechanism is known as
 \textit{protection rings} (Ring 0 -- Ring 3). The kernel runs \emph{in} Ring 0
 (most privileged) and switches to Ring 3 (least privileged) when a normal
 process is scheduled. A system call is invoked by the process if it needs
-something beyond its scope. The kernel takes over, deals with the request and
+anything beyond its scope. The kernel takes over, deals with the request and
 returns execution back to the process. This is known as \textit{context switch}
 and switching between Rings happens along with it.
 
 \subsection{System Calls}
 
-As already mentioned in the previous paragraph, a process only has limited
+As already mentioned in the previous paragraph, a process only holds limited
 capabilities and the kernel has to take over to fulfill certain (more
-privileged) operations. The operating system's documentation tells you which
-system calls are available (on which platform) and what parameters
-each of them requires. Let us illustrate this with an example: On x86 Linux the
-system call
+privileged) operations. The operating system's documentation tells which system
+calls are available (on which platform) and what parameters each of them
+requires. Let us illustrate this with an example: On x86 Linux the system call
 number 4 (starting from 0) is the \texttt{sys\_write} system call which writes
 data to a file descriptor. It takes three arguments, the file descriptor to
 write to, a pointer to the start of the data which should be written and the
-length of the data. The number of the system call together with these three
+length of the data. The number of the system call, together with these three
 parameters are placed in the \texttt{EAX}, \texttt{EBX}, \texttt{ECX},
-\texttt{EDX} respectively. To invoke the system call issue following
-instruction:
+\texttt{EDX} registers respectively. Following instruction is issued to invoke
+the system call:
 
 \begin{nasmcode*}{linenos=false}
     int     0x80
 \end{nasmcode*}
 
-Nowadays you may encounter a different mechanism for system calls using Virtual
-Dynamic Shared Objects (vDSO). This goes beyond our scope here, we will use the
-previously mentioned mechanism in our exploits as they work side by side.
-Consult the corresponding man
+Nowadays you may encounter a different mechanism used for system calls,
+utilizing Virtual Dynamic Shared Objects (vDSO). This goes beyond our scope
+here and we will use the previously mentioned mechanism in the following
+exploits as they work side by side. Consult the corresponding man
 page\footnote{\url{http://man7.org/linux/man-pages/man7/vdso.7.html}} for
 further reading.
 
 \subsection{Memory}
 
-Physical memory is managed by the operation system kernel by utilising the
-Memory Management Unit (MMU). Each process' address space is virtualized and
-memory operations are translated on-the-fly by the MMU. Physical memory is
-segmented into \textit{pages} (typically \SI{4}{\kibi\byte} in size) and each
-page can be mapped \emph{into} the virtual address space of one or more
-(shared) processes.~\cite[pp.~400]{unix_interals}
+Physical memory is managed by the kernel through the use of a Memory Management
+Unit (MMU). Each process' address space is virtualized and memory operations
+are translated on-the-fly by the MMU. Physical memory is segmented into
+\textit{pages} (typically \SI{4}{\kibi\byte} in size) and each page can be
+\emph{mapped into} the virtual address space of one or more (shared page)
+processes.~\cite[pp.~400]{unix_interals}
 
 The main parts located inside the (virtual) address space of a process are the
 executable itself with its \texttt{.text} and \texttt{.data} section, the heap
@@ -276,19 +276,19 @@ calling) and libraries.
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.35\textwidth]{gfx/little_endian.pdf}
-    \caption{Placement of bytes in memory in little-endian}
+    \caption{Byte order in little-endian}
     \label{fig:little_endian}
 \end{figure}
 
 Endianness refers to the byte order used when storing data in memory (or
 transmitting it over the network). x86 uses little-endian which is described in
-\cref{fig:little_endian} (from
+\cref{fig:little_endian} (taken from
 Wikipedia\footnote{\url{https://en.wikipedia.org/w/index.php?title=Endianness&oldid=696417697\#/media/File:Little-Endian.svg}}).
 The least significant byte of a word is placed at the lower memory address and
-successive bytes are placed as the memory address increases. We will later
-refer back to this when needed. The related Wikipedia
-page\footnote{\url{https://en.wikipedia.org/wiki/Endianness}} goes into more
-detail about this than we need.
+successive bytes are placed as the memory address increases. The related
+Wikipedia page\footnote{\url{https://en.wikipedia.org/wiki/Endianness}} goes
+into more detail about this --- more than currently needed. We will later refer
+back to this when swapping bytes because of endianness.
 
 \subsection{Calling Convention}
 \label{sub:calling_convention}
@@ -337,14 +337,13 @@ describing how to handle additional arguments. If you are unfamiliar with
 page\footnote{\url{http://linux.die.net/man/3/printf}} now.
 
 Taking a closer look at \texttt{printf} we can see that its first argument is a
-format string followed by a variable number of additional arguments.
-\texttt{stdarg.h} describes a common implementation of this together with a
-small example in their man
-page\footnote{\url{http://linux.die.net/man/3/stdarg}}. As in that example,
-\texttt{printf} trusts you that the number of arguments supplied is equal (or
-greater) than the number of formatters. Calling \texttt{printf} with the format
-string \texttt{"\%d + \%d = \%d"}, for instance, assumes that (at least) three
-additional arguments are given.
+format string followed by a variable number of additional arguments. A common
+implementation, together with a small example, of this is described in the man
+page\footnote{\url{http://linux.die.net/man/3/stdarg}} of \texttt{stdarg.h}.
+\texttt{printf} trusts the programmer that the number of arguments supplied is
+equal (or greater) than the number of formatters. Calling \texttt{printf} with
+the format string \texttt{"\%d + \%d = \%d"}, for instance, assumes that (at
+least) three additional arguments are given.
 
 \begin{listing}[h!]
     \begin{minipage}[t]{0.4\textwidth}
@@ -369,15 +368,15 @@ additional arguments are given.
             bfd98ed4
         \end{code*}
     \end{minipage}
-    \caption{Program vulnerable to Format String Exploits}
+    \caption{Program vulnerable to format string exploits}
     \label{src:format_string_exploit}
 \end{listing}
 
 The exploit comes from the notion that a format string provided by an attacker
 gets interpreted. The program shown in \cref{src:format_string_exploit} will
 take an arbitrary string from \texttt{stdin} and pass it on to \texttt{printf}.
-For simple inputs (not containing formatter) this works fine. But as soon as
-formatter are provided, \texttt{printf} accesses the locations where the
+For simple inputs (not containing formatters) this works fine. But as soon as
+formatters are provided, \texttt{printf} accesses the locations where the
 corresponding arguments \emph{would} be located. From the calling convention
 described in \cref{sub:calling_convention} we know that these arguments
 \emph{would} be located on the stack, therefore \texttt{printf} will print
@@ -401,13 +400,14 @@ break ASLR (see \cref{sub:info_leak}).
 
 We would like to point the reader to the book \textit{Hacking: The Art of
 Exploitation}~\cite[pp.~167]{art_of_exploitation} for more details about this
-and following techniques. We will come back to this technique later on to show
-that \texttt{printf} enables even more sophisticated attacks.
+and similar techniques. We will come back to this technique later on to show
+that \texttt{printf} enables even more sophisticated attacks (see
+\cref{sub:printbf}).
 
 \section{Buffer Overflow}
 \label{sec:buffer_overflow}
 
-The second type of exploits we'll look at is known as Buffer Overflows and as
+The second type of exploits we'll look at is known as buffer overflows and as
 on may already derive from the name, this is about submitting more data to a
 buffer than it was originally designed for. This setup can be exploited when
 bound checking is done wrong or not at all. An attacker is therefore able to
@@ -415,14 +415,14 @@ overwrite memory behind the buffer's location.
 
 \subsection{Disabling Mitigations}
 
-The three mitigation mechanisms DEP, ASLR and Stack Cookies are enabled by
-default nowadays and as mentioned in the introduction we start off at a pointer
-where these mechanisms were not. So to run the provided examples we first have
-to disable them. DEP and Stack Cookies can be disabled via compiler flags to
-the extend necessary using \texttt{-z execstack} and
+The three mitigation mechanisms DEP, ASLR and StackGuard are enabled by default
+nowadays, but, as mentioned in the introduction, we start off at a point where
+these mechanisms were not yet in place. So to run the provided examples we
+first have to disable them. DEP and StackGuard can be disabled via compiler
+flags to the extend necessary using \texttt{-z execstack} and
 \texttt{-fno-stack-protector} respectively.
 
-ASLR can be disabled globally so that \emph{new} process' has an unscrambled
+ASLR can be disabled globally so that \emph{new} processes have an unscrambled
 memory layout:
 
 \begin{code*}{linenos=false}
@@ -431,7 +431,7 @@ memory layout:
 
 Writing \texttt{2} instead of \texttt{0} will switch ASLR back to its default
 state. Root privileges are, of course, required for this. There is also another
-way by invoking \texttt{setarch}:
+way by using \texttt{setarch} to run a binary:
 
 \begin{code*}{linenos=false}
     > setarch `arch` -R ./binary
@@ -444,8 +444,7 @@ located. The most interesting location would of course be the stack because,
 apart from local variables and arguments, it holds the return address of a
 function. But buffers located inside the heap or static may also be viable
 options. Common terms related to these scenarios are \textit{stack smashing}
-and \textit{heap corruption}. We will talk about heap corruption later on when
-breaking ASLR, for now we focus our attention on stack smashing.
+and \textit{heap corruption}. For now we focus our attention on stack smashing.
 
 \begin{figure}[H]
     \centering
@@ -456,16 +455,16 @@ breaking ASLR, for now we focus our attention on stack smashing.
 
 Let's start off by examining the stack containing a buffer \texttt{c} as local
 variable, see \cref{fig:stack_frame}. Right now the buffer holds the string
-\texttt{"hello"} followed by a terminator. Since it has been allocated
-to hold a maximum of \SI{12}{\byte} this fits. If data is written to the buffer
-larger than \SI{12}{\byte} the following variable (or parameter) \texttt{bar}
-will be overwritten, followed by the saved frame pointer and the return
-address. If even more data is supplied the following stack frame will be
-overwritten in the same manner.
+\texttt{"hello"} followed by a terminator. Since it has been allocated to hold
+a maximum of \SI{12}{\byte} this fits. If data larger than \SI{12}{\byte} is
+written to the buffer, the following variable (or parameter) \texttt{bar} will
+be overwritten, followed by the saved frame pointer and the return address. If
+even more data is supplied the adjacent stack frame will be overwritten in the
+same manner.
 
 If an attacker can provide the data written to the buffer and no (or wrong)
 bound checking is done, he is able to inject arbitrary (malicious) code into
-the stack frame. This could be, for instance, be used to overwrite a flag
+the stack frame. This could, for instance, be used to overwrite a flag
 indication whether an authentication has been performed successfully or not.
 But since this is pretty forward let's go beyond that and see what happens when
 changing the return address.
@@ -483,8 +482,8 @@ changing the return address.
 
 As shown in \cref{src:buffer_overflow} we have a buffer suited for
 \SI{20}{\byte} but without any bound checking. If the provided input is longer,
-we will be able to overwrite the return address. Let's have a look at the
-resulting binary utilizing \texttt{objdump}.
+it will overwrite the return address. Let's have a look at the resulting binary
+utilizing \texttt{objdump}.
 
 Looking at lines 13 and 23 we can infer that the buffer will start
 \SI{28}{\byte} (\texttt{0x1c}) before the base pointer. Hence we have to supply
@@ -500,8 +499,8 @@ One does not simply jump into mordor()!
 Segmentation fault (core dumped)
 \end{code*}
 
-\texttt{mordor} has been executed successfully. Despite the segmentation
-fault one can see that return address has been overwritten successfully.
+\texttt{mordor} has been executed successfully. Despite the segmentation fault
+one can see that the return address has been overwritten successfully.
 
 \section{Shell Code}
 
@@ -514,9 +513,10 @@ piece of (binary) code which opens up a shell that reads and executes commands
 from an attacker. This example is taken from Dhaval Kapil's
 blog\footnote{\url{https://dhavalkapil.com/blogs/Shellcode-Injection/} on
 December 2015} there is also a section about this in \textit{Hacking: The Art
-of Exploitation}~\cite[pp.~281]{art_of_exploitation}. There is also a
-comprehensive article \cite{phrack_stack_smash} about Stack Smashing on
-\texttt{phrack}\footnote{\url{http://phrack.org/}}.
+of Exploitation}~\cite[pp.~281]{art_of_exploitation}.
+
+A more com comprehensive article \cite{phrack_stack_smash} about Stack Smashing
+is available on \texttt{phrack}\footnote{\url{http://phrack.org/}}.
 
 \subsection{Crafting Shell Code}
 
@@ -532,15 +532,15 @@ comprehensive article \cite{phrack_stack_smash} about Stack Smashing on
 \end{listing}
 
 The piece of assembly shown in \cref{src:shell_code} sets up the parameters for
-the \texttt{execve} system call and than invokes it to replace the currently
+the \texttt{execve} system call and then invokes it to replace the currently
 running process with a shell. \texttt{execve} takes three arguments, a string
 of the program to execute (here \texttt{"/bin//sh"} + terminator), a list of
-arguments for that program and a list of environment variables. Its system call
-number is 11 and it will accept \texttt{NULL} for both lists. The double slash
-in the first argument is used to prevent null bytes inside the shell code. The
-function which reads the shell code may truncate it upon reading a null byte,
-therefore we have to work around this without changing the underlying
-semantics.
+arguments for that program and a list of environment variables. The
+corresponding system call number is 11 and \texttt{NULL} will be accepted for
+both lists. The double slash in the first argument is used to prevent null
+bytes inside the shell code. The function which reads the shell code may
+truncate it upon reading a null byte, therefore we have to work around this
+without changing the underlying semantics.
 
 Running this code through an assembler yields binary code, shown in
 \cref{src:shell_code}, which will be part of the payload.
@@ -551,9 +551,8 @@ Running this code through an assembler yields binary code, shown in
 
 \subsection{Examining the Target Binary}
 
-Finding the starting location of our buffer will be a little bit more
-complicated, we cannot read it directly from the binary of the target program
-so, in \cref{src:shell_code2}, we'll examine it in a debugger .
+We'll examine the target binary in a debugger (\cref{src:shell_code2}) to find
+the starting location of our buffer.
 
 \begin{listing}[h!]
     \begin{minipage}[t]{0.4\textwidth}
@@ -568,19 +567,19 @@ so, in \cref{src:shell_code2}, we'll examine it in a debugger .
 
 Now we know that the buffer will be located at \texttt{0xbffff4bc} (saved base
 pointer will be at \texttt{0xbffff528}) at runtime, but it may be offset a few
-bytes when run without debugger. This happens because environment variables and
-meta information, like the program name, determine the stack starting position
-(stack is placed right before environment variables). Hence we may not hit the
-first instruction of our shell code right away, but since the buffer is bigger
-than the actual payload we can improve our odds by prefixing the shell code
-with \texttt{NOP} instructions. As long as the return address points somewhere
-into this sequence of \texttt{NOP}s the CPU will \emph{slide} to the first
-instruction of the shell code. Therefore this is known as a
+bytes when run without a debugger. This happens because environment variables
+and meta information, like the program name, determine the stack starting
+position (stack is placed right before environment variables). Hence we may not
+hit the first instruction of our shell code right away, but since the buffer is
+bigger than the actual payload we can improve our odds by prefixing the shell
+code with \texttt{NOP} instructions. As long as the return address points
+somewhere into this sequence of \texttt{NOP}s the CPU will \emph{slide} to the
+first instruction of the shell code. Therefore this is known as a
 \textit{\texttt{NOP} Sled}. We append some arbitrary data to the shell code as
 offset to overwrite the return address. This is also illustrated in
-\cref{fig:shell_code} where \textit{target} is new return address supplied by
-the attacker. Using the maximum amount of \texttt{NOP}s possible would also be
-a viable option, here we just went with the original example.
+\cref{fig:shell_code} where \textit{target} is the new return address supplied
+by the attacker. Using the maximum amount of \texttt{NOP}s possible would also
+be a viable option, here we just went with the original example.
 
 \begin{figure}[H]
     \centering
@@ -649,7 +648,7 @@ is marked (looking at \texttt{Flg} in lines 8 and 19) with execute
 segfault described in the previous paragraphs. The program is terminated upon
 receiving the segfault.
 
-DEP makes injection arbitrary code into binary much harder, but we still
+DEP makes injecting arbitrary code into binary much harder, but we still
 control the return address --- so let's use it.
 
 \section{Return Oriented Programming (ROP)}
@@ -678,9 +677,9 @@ the second one sets up the registers (arguments) and the last one calls the
 \texttt{execve} system call.
 
 The final \texttt{ret} statement of a gadgets is required for chaining them
-together. We not only use the Buffer Overflow to control \emph{one}, but
-\emph{multiple} return addresses. Because of this our payload will be made up
-by a list of return addresses (the start of each gadgets) interleaved by some
+together. We not only use the buffer overflow to control \emph{one}, but
+\emph{multiple} return addresses. Because of this our payload will be composed
+of a list of return addresses (the start of each gadgets) interleaved by some
 padding. Each provided address will be consumed one by one at the end of each
 gadgets to \emph{jump} to the next one. The payload may still contain data like
 \texttt{"/bin//sh"} if necessary.
@@ -720,21 +719,22 @@ about ROP.
 \end{listing}
 
 The target program is displayed in \cref{src:rop_example}. We will not be able
-to inject and execute shell code, and there is no function present which
-directly opens up a shell for us. But there are parts which can be used to do
-so.
+to inject and execute shell code --- and there is no function present which
+directly opens up a shell for us. But there are parts which can be glued
+together to do so.
 
 On the right hand side we see the execution of the exploit. First note that we
-no longer compile the binary with \texttt{-z execstack}. We read the locations
-of \texttt{not\_used} and \texttt{system} via \texttt{gdb} and note down the
+no longer compile with \texttt{-z execstack}. We read the locations of
+\texttt{not\_used} and \texttt{system} via \texttt{gdb} and note down the
 corresponding addresses. \texttt{objdump} is used to have a quick glance at the
 generated binary code for \texttt{vulnerable\_function} and note down the
 distance between the saved base pointer the start of the buffer too (line 17).
 
-Putting this together yields following payload: Starting with some
-\texttt{'A'}s to fill the buffer followed by 4 \texttt{'B'}s to overwrite the
-saved base pointer. The next part is new, we attach the address of
-\texttt{system} followed by some padding and a pointer to \texttt{not\_used}.
+Following payload can be established with the gathered information: Starting
+with some \texttt{'A'}s to fill the buffer followed by 4 \texttt{'B'}s to
+overwrite the saved base pointer. The next part is new, we attach the address
+of \texttt{system} followed by some padding and a pointer to
+\texttt{not\_used}.
 
 We happily receive a shell upon running the exploit. Execution will be handed
 back to the original binary after we close the shell. Since we messed up the
@@ -799,18 +799,20 @@ was not compiled as a Position Independent Executable (PIE). Since this is
 actually the default of \texttt{gcc}, most programs' \texttt{.text} segment
 will always start at the same location. One could pass the corresponding flag
 (\texttt{-pie}) to the compiler to prevent this, so ASLR would be able to
-randomize these segments too.
+randomize these segments too, but you'd have to compile every relevant package
+again instead of using the distribution vendor's pre-compiled binary.
 
 Breaking ASLR, even when the code is compiled with \texttt{-pie}, is easier
-than it seems at first. Relocation only happens to a section at whole,
+than it seems at first. Relocation only happens to a section as a whole,
 functions inside a section still share the same relative distance as they would
-without ASLR. But before exploit this fact have a look at the randomized
+without ASLR. But before exploit this fact, have a look at the randomized
 addresses again.
 
 Only three nybble ($3 \times \SI{4}{\bit}$) differ between multiple runs giving
-us $2^{12} = 4096$ possibilities. If the scenario allows it, brute forcing is a
-viable option here. But note that this changes drastically for \SI{64}{\bit}.
-But we won't hassle with brute force, a better option has already been teased.
+us $2^{12} = 4096$ possibilities. If the scenario allows it, brute forcing
+would be a viable option here. But note that this changes drastically for
+\SI{64}{\bit}. But we won't hassle with brute force, a better option has
+already been teased.
 
 \subsection{Info Leak}
 \label{sub:info_leak}
@@ -842,11 +844,11 @@ Augment your ROP chain to take the offset into account. Run the exploit. Since
 this is rather simple and we already gave an example how to calculate the
 offset, we would like to leave this as an exercise for the reader.
 
-Manipulate the target file used in the ROP example to print the address of
-\texttt{printf} first, \emph{then} read in the payload via \texttt{stdin}. This
-way you can first simulate a leaked pointer, adapt the ROP chain and run it.
-Double check the distances between functions in the libraries, they may differ
-with the ones used in this writeup.
+Manipulate the target source code used in the ROP example to print the address
+of \texttt{printf} first, \emph{then} read in the payload via \texttt{stdin}.
+This way you can first simulate a leaked pointer, adapt the ROP chain and run
+it. Double check the distances between library functions, they may differ with
+the ones used in our example.
 
 \section{StackGuard}
 
@@ -871,13 +873,13 @@ different forms.
         the return address.
 
     \item[Random] A random canary is chosen at program start, stored
-        \textit{somewhere save} and pushed into the stack upon function calls.
-        The canary on the stack is checked against the one stored before
-        executing the return instruction. The program is terminated upon
+        \textit{somewhere save} and pushed onto the stack upon function calls.
+        The canary on the stack is compared with the one stored save before
+        executing the return instruction. The program is terminated on
         mismatch. With this setup an attacker has to know the canary in order
-        to overwrite the return address. Since it is chosen at random during
-        program start, an attacker cannot reliably reproduce the same canary in
-        his cloned setup.
+        to overwrite the return address via a buffer overflow. Since it is
+        picked at random during program start, an attacker cannot reliably
+        reproduce the same canary in his cloned setup.
 
         In our case the original canary will be stored in one of the segment
         registers\footnote{\url{https://en.wikipedia.org/w/index.php?title=X86_memory_segmentation&oldid=697253060}
@@ -915,7 +917,7 @@ Using \texttt{"AAAAAAA\textbackslash{}n"} and
 16 and 17. The canary can be observed in line 18.
 
 The canary itself is composed of a terminator (null) followed by a random
-sequence of \SI{3}{\byte}. This sequence changes very time the program is run.
+sequence of \SI{3}{\byte}. This sequence changes every time the program is run.
 Feeding more data to the buffer and overflowing it this way yields termination
 of the program. Note that \texttt{puts} is still executed, the termination
 happens just before the return of \texttt{fun}.
@@ -928,15 +930,15 @@ happens just before the return of \texttt{fun}.
     Aborted (core dumped)
 \end{code*}
 
-\subsection{Server Worker Paradigm}
+\subsection{Server-Worker Paradigm}
 
 Of course there are multiple paths available when trying to break the
 StackGuard mechanism, as mentioned in \cite{phrack_stack_guard}. We will now
-have a look at the common server worker paradigm. \Cref{src:server_worker}
-shows how that paradigm looks like from a task monitors view. The server /
+have a look at the common server-worker paradigm. \Cref{src:server_worker}
+shows how that paradigm looks like from a task monitor's view. The server /
 daemon (here \texttt{apache2}) is started with root privileges in order to
 listen on a \textit{privileged} port. After the initialization has been
-compiled the server forks itself multiple times to create a set of workers. In
+compiled, the server forks itself multiple times to create a set of workers. In
 this example the workers drop their root privileges right away by changing
 their current user to \texttt{www-data}. But our focus is not on the privileges
 but the problem introduced by fork with respect to the StackGuard.
@@ -987,8 +989,8 @@ but before that we need to talk about the Control-Flow Graph (CFG).
 
 Again the name already tells you what this is about, a directed graph that
 reflects the control-flow of a program. Different definitions exist regarding
-what is actually used to compose a node and anchor them together.In our case we
-will create a node out of each function and connect them at function calls.
+what is actually used to compose a node and anchor them together. In our case
+we will create a node out of each function and connect them at function calls.
 
 \begin{figure}[H]
     \centering
@@ -997,10 +999,10 @@ will create a node out of each function and connect them at function calls.
     \label{fig:cfg}
 \end{figure}
 
-\Cref{fig:cfg} shows an example of such a graph. From this graph you can tell
-that \texttt{funB} will be called from \texttt{funA} and \texttt{funE} but not,
-for instance, from \texttt{funD}. This is all we care about right now. Note
-that contrary to some definitions this graph is not acyclic since we also model
+\Cref{fig:cfg} shows an example of such a graph. From it one can tell that
+\texttt{funB} will be called from \texttt{funA} and \texttt{funE} but not, for
+instance, from \texttt{funD}. This is all we care about right now. Note that
+contrary to some definitions this graph is not acyclic since we also model
 direct and indirect recursion as can be seen by $\texttt{funC} \to
 \texttt{funC}$ and $\texttt{funcB} \to \texttt{funcD} \to \texttt{funcE} \to
 \texttt{funcB}$ respectively.
@@ -1008,7 +1010,7 @@ direct and indirect recursion as can be seen by $\texttt{funC} \to
 \subsection{Back to CFI}
 
 CFI is a big topic and, like other topics already mentioned, goes beyond the
-scope of this writeup. The first pointer we will hand the reader aims at the
+scope of this writeup. The first pointer we hand the reader aims at the
 corresponding
 section\footnote{\url{http://clang.llvm.org/docs/ControlFlowIntegrity.html}} of
 the Clang documentation, but we recommend checking out the related research
@@ -1029,10 +1031,10 @@ for each function. Looking back at the example shown in \cref{fig:cfg} we can
 determine that \texttt{funB} returns either to \texttt{funA} or \texttt{funE}.
 The corresponding addresses are put into this set which is then stored in the
 binary. Before \texttt{funB} returns the return address on the stack is
-compared to the entries listed in the corresponding set. If no match can be
-found, the program terminates.
+compared to the entries listed in the corresponding set. If no match is found,
+the program terminates.
 
-With this mechanism setup, one can easily see that it is no longer possible to
+With this mechanism set up, one can easily see that it is no longer possible to
 chain \emph{arbitrary} gadgets together to pull off ROP. But we still control
 the return address and can jump to different locations as long as we stick to
 the CFG. Each transition from one node to another has to be valid, while the
@@ -1046,10 +1048,11 @@ Using a changed return address is what ultimately enables control-flow bending.
 Stack integrity ensures that the same return address is used upon executing the
 \texttt{ret} instruction as was pushed upon that very function call. This can
 be achieved by using a \textit{shadow-stack} similar to the StackShield
-mechanism but we suggest reading about \textit{code-pointer integrity}
+mechanism but we suggest reading about \textit{Code-Pointer Integrity (CPI)}
 \cite{cpi} regarding this topic.
 
 \subsection{There is an interpreter in your C}
+\label{sub:printbf}
 
 We conclude this section by mentioning the availability of an interpreter
 (probably) available in your standard library. As presented by gannimo,
@@ -1063,7 +1066,7 @@ loop and the format strings may depend heavily on your library's
 implementation. (Also not all implementation are Turing complete).
 
 A compiler accepting Brainfuck and spitting out the corresponding format
-strings, including examples can be found on HexHive's
+strings, including examples, can be found on HexHive's
 GitHub\footnote{\url{https://github.com/HexHive/printbf}}.
 
 \section{Other Architectures}
@@ -1088,7 +1091,7 @@ instead of pushing them onto the stack. This makes ROP much easier.
 
 Contrary, breaking ASLR by brute force gets much harder since the address space
 is \emph{much} bigger which yields more entropy for the randomization. Similar
-techniques like \textit{heap spraying} basically useless, but we can still
+techniques like \textit{heap spraying} are basically useless, but we can still
 resort to the info leak. Breaking a canary via brute force gets only a little
 bit harder, but this has already been shown in an example.
 
