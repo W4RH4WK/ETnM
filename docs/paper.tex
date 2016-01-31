@@ -36,7 +36,7 @@
 \end{quote}
 
 Exploiting binaries is an extremely broad topic with many specialized
-techniques for even the most exotic scenarios. In this writeup we will take a
+techniques for even the most exotic scenarios. In this write-up we will take a
 narrow look at exploiting \texttt{printf} with crafted format strings first and
 follow up with an introduction about buffer overflows. Mitigation mechanisms
 will be disabled at first and enabled one by one --- discussing them when they
@@ -52,7 +52,7 @@ easily brute forced in certain scenarios. Control-Flow Integrity (CFI) together
 with a word about Stack Integrity is provided as an outlook for the reader.
 
 Although x86 has been chosen as target platform a quick glance at other
-architectures (x86\_64 and ARM) is taken prior concluding this writeup. Some
+architectures (x86\_64 and ARM) is taken prior concluding this write-up. Some
 basics about the target platform will be communicated before running the first
 exploit.
 
@@ -77,10 +77,10 @@ further details, apart from the given references.
 \section{Introduction}
 
 Exploiting binaries was comparatively easy ten to fifteen years ago. There were
-no special mitigation mechanisms in place denying even the most simplest
-exploits. This is the point in time where we will start off. First we talk
-about two very simple exploits, namely the format string exploit and the buffer
-overflow in combination with shell code. Although there is a huge collection of
+no special mitigation mechanisms in place denying even the simplest exploits.
+This is the point in time where we will start off. First we talk about two very
+simple exploits, namely the format string exploit and the buffer overflow in
+combination with shell code. Although there is a huge collection of
 exploitation techniques known to the public, we will only look at a very small
 fraction of them in this project.
 
@@ -106,7 +106,7 @@ Integrity (CFI).
 Examples will be provided along the way to support the reader and provide
 additional explanations. Finally we will conclude with a word about other
 architectures (x86\_64 and ARM) followed by a short recap about what has been
-taught in this writeup.
+taught in this write-up.
 
 \subsection{Main Assumption}
 
@@ -408,7 +408,7 @@ that \texttt{printf} enables even more sophisticated attacks (see
 \label{sec:buffer_overflow}
 
 The second type of exploits we'll look at is known as buffer overflows and as
-on may already derive from the name, this is about submitting more data to a
+one may already derive from the name, this is about submitting more data to a
 buffer than it was originally designed for. This setup can be exploited when
 bound checking is done wrong or not at all. An attacker is therefore able to
 overwrite memory behind the buffer's location.
@@ -466,8 +466,8 @@ If an attacker can provide the data written to the buffer and no (or wrong)
 bound checking is done, he is able to inject arbitrary (malicious) code into
 the stack frame. This could, for instance, be used to overwrite a flag
 indication whether an authentication has been performed successfully or not.
-But since this is pretty forward let's go beyond that and see what happens when
-changing the return address.
+But since this is pretty straight forward let's go beyond that and see what
+happens when changing the return address.
 
 \begin{listing}[h!]
     \begin{minipage}[t]{0.37\textwidth}
@@ -515,8 +515,8 @@ blog\footnote{\url{https://dhavalkapil.com/blogs/Shellcode-Injection/} on
 December 2015} there is also a section about this in \textit{Hacking: The Art
 of Exploitation}~\cite[pp.~281]{art_of_exploitation}.
 
-A more com comprehensive article \cite{phrack_stack_smash} about Stack Smashing
-is available on \texttt{phrack}\footnote{\url{http://phrack.org/}}.
+A more comprehensive article \cite{phrack_stack_smash} about Stack Smashing is
+available on \texttt{phrack}\footnote{\url{http://phrack.org/}}.
 
 \subsection{Crafting Shell Code}
 
@@ -676,7 +676,7 @@ example. The first one pushes the string \texttt{"/bin//sh"} onto the stack,
 the second one sets up the registers (arguments) and the last one calls the
 \texttt{execve} system call.
 
-The final \texttt{ret} statement of a gadgets is required for chaining them
+The final \texttt{ret} statement of a gadget is required for chaining them
 together. We not only use the buffer overflow to control \emph{one}, but
 \emph{multiple} return addresses. Because of this our payload will be composed
 of a list of return addresses (the start of each gadgets) interleaved by some
@@ -693,8 +693,8 @@ gadgets to \emph{jump} to the next one. The payload may still contain data like
 One can easily get a list of available gadgets by piping the output of
 \texttt{objdump} to \texttt{grep} filtering for \texttt{ret} instructions. This
 is done in \cref{src:rop_gadgets} where three different gadgets can be
-observed. Of course each gadget can be arbitrary long, we just used a length of
-5 instructions in this example.
+observed. Of course each gadget can be arbitrarily long, we just used a length
+of 5 instructions in this example.
 
 There are algorithms and tools available which simplify the process of finding
 such gadgets (and even whole chains) but they go beyond the scope of this
@@ -805,7 +805,7 @@ again instead of using the distribution vendor's pre-compiled binary.
 Breaking ASLR, even when the code is compiled with \texttt{-pie}, is easier
 than it seems at first. Relocation only happens to a section as a whole,
 functions inside a section still share the same relative distance as they would
-without ASLR. But before exploit this fact, have a look at the randomized
+without ASLR. But before exploiting this fact, have a look at the randomized
 addresses again.
 
 Only three nybble ($3 \times \SI{4}{\bit}$) differ between multiple runs giving
@@ -831,7 +831,7 @@ implications of such a leak by an example taken from \cite{rpisec}.
     \medskip
 
     We now know that \texttt{system} is at:
-    \[ \mathtt{0xb7e72280} - \mathtt{0xd0f0} = \mathtt{0xb7e65190} \]
+    \[ \texttt{0xb7e72280} - \texttt{0xd0f0} = \texttt{0xb7e65190} \]
 \end{quote}
 
 In case you may wonder how easy it is to leak a pointer, this already happened
@@ -1010,7 +1010,7 @@ direct and indirect recursion as can be seen by $\texttt{funC} \to
 \subsection{Back to CFI}
 
 CFI is a big topic and, like other topics already mentioned, goes beyond the
-scope of this writeup. The first pointer we hand the reader aims at the
+scope of this write-up. The first pointer we hand the reader aims at the
 corresponding
 section\footnote{\url{http://clang.llvm.org/docs/ControlFlowIntegrity.html}} of
 the Clang documentation, but we recommend checking out the related research
@@ -1114,7 +1114,7 @@ memory operations).
 
 Starting with no mitigation mechanisms in place, we have seen how easy it is to
 manipulate the program by exploiting just one simple buffer overflow. Going
-beyond simple manipulations like changing locale variables, we craft shell code
+beyond simple manipulations like changing local variables, we craft shell code
 and injected it to open up a shell accepting and executing arbitrary inputs.
 Next, Data Execution Prevention (DEP) was presented to deny the ability of
 \emph{injecting} new code.
@@ -1127,7 +1127,7 @@ instructions.
 
 Address Space Layout Randomization (ASLR) was established to prevent ROP but
 can be defeated with an information leak. Even the StackGuard mechanism can be
-broking with brute force (including an unexpected low upper bound) in certain
+broken with brute force (including an unexpected low upper bound) in certain
 scenarios.
 
 The basic idea behind Control-Flow Integrity (CFI) was communicated after that
