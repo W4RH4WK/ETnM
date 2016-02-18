@@ -193,7 +193,7 @@
 \usepackage{pdfpages}
 
 % references
-\usepackage[noabbrev]{cleveref}
+\usepackage[capitalise,noabbrev]{cleveref}
 \usepackage[numbers]{natbib}
     \bibliographystyle{plainnat}
 

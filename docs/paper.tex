@@ -23,6 +23,12 @@
 \usetikzlibrary{positioning,shapes.geometric}
 \usetikzlibrary{shapes.multipart}
 
+\newcommand{\redbox}[1]{%
+    \colorlet{currentcolor}{.}%
+    {\color{red}%
+    \fbox{\color{currentcolor}#1}}%
+}
+
 \begin{document}
 
 \maketitle
@@ -263,10 +269,10 @@ Unit (MMU). Each process' address space is virtualized and memory operations
 are translated on-the-fly by the MMU. Physical memory is segmented into
 \textit{pages} (typically \SI{4}{\kibi\byte} in size) and each page can be
 \emph{mapped into} the virtual address space of one or more (shared page)
-processes.~\cite[pp.~400]{unix_interals}
+processes~\cite[pp.~400]{unix_interals}.
 
 The main parts located inside the (virtual) address space of a process are the
-executable itself with its \texttt{.text} and \texttt{.data} section, the heap
+executable itself with its \texttt{.text} and \texttt{.data} segment, the heap
 (used for dynamic data), the stack (used for local variables and function
 calling) and libraries.
 
@@ -449,7 +455,7 @@ and \textit{heap corruption}. For now we focus our attention on stack smashing.
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.4\textwidth]{gfx/stack_smash.png}
-    \caption{Stack frame containing a buffer}
+    \caption{Stack frame containing a buffer~\cite{wiki:buffer_overflow}}
     \label{fig:stack_frame}
 \end{figure}
 
@@ -549,6 +555,16 @@ Running this code through an assembler yields binary code, shown in
     \x31\xC0\x50\x68\x2F\x2F\x73\x68\x68\x2F\x62\x69\x6E\x89\xE3\x50\x89\xE2\x53\x89\xE1\xB0\x0B\xCD\x80
 \end{code*}
 
+Generally functions handling strings will terminate upon reading a
+\texttt{NULL} byte. Offensive Security's \textit{Metasploit Fundamentals} has a
+dedicated
+section\footnote{\url{https://www.offensive-security.com/metasploit-unleashed/generating-payloads/}
+on February 2016} about generating payloads (utilizing Metasploit) without
+unwanted bytes. One could work around this manually by setting the first part
+of register prior setting the second part. Another way would be by issuing an
+\texttt{XOR} with the register itself as in the first instruction of the
+example payload.
+
 \subsection{Examining the Target Binary}
 
 We'll examine the target binary in a debugger (\cref{src:shell_code2}) to find
@@ -606,14 +622,14 @@ the new return address which should point to the \texttt{NOP} Sled's center.
 \codefile[linenos=false]{../src/shell_code/run.txt}
 
 After injecting the payload we get a few lines of garbage and receive a prompt
-by hitting return a few times. You can enter commands and receive output like
+by hitting return a few times. You can enter commands and receive output as
 usual.
 
 \section{Data Execution Prevention (DEP)}
 
 The first mitigation technique discussed, DEP, is also known under the term
 \textit{write XOR execute (\texttt{w\^{}x})} and it will prevent us from
-executing injected code like we did in the shell code example previously. This
+executing injected code as we did in the previous shell code example. This
 happens by attaching an execute flag to each page (in addition to the read /
 write flags). If the instruction pointer points to a page without the execute
 flag set, a segmentation fault will be triggered. The only pages flagged for
@@ -624,14 +640,14 @@ would simply segfault.
 
 The execution flag is enforced by hardware on modern platforms. But for CPUs
 that lack such hardware support, software-enforced DEP provides limited
-protection.~\cite{wiki:dep}
+protection~\cite{wiki:dep}.
 
 Previously we worked around this by passing \texttt{-z execstack} to the
 compiler, hence data on the stack was executable. This can also be seen in the
 output of \texttt{readelf}.
 
 \begin{listing}[h!]
-    \codefile{../src/shell_code/vuln_readelf.txt}
+    \codefile[escapeinside=\%\%]{../src/shell_code/vuln_readelf.txt}
     \caption{\texttt{readelf} output with and without \texttt{-z execstack}}
     \label{src:dep_readelf}
 \end{listing}
@@ -653,13 +669,13 @@ control the return address --- so let's use it.
 
 \section{Return Oriented Programming (ROP)}
 
-The first example shown in the \cref{sec:buffer_overflow} already illustrated
-the power that comes along with controlling the return address. It enabled us
-to jump to a completely different function upon execution. The target binary
-may not contain a function doing exactly what an attacker wants to do. But by
+The first example shown in \cref{sec:buffer_overflow} already illustrated the
+power that comes along with controlling the return address. It enabled us to
+jump to a completely different function upon execution. The target binary may
+not contain a function doing exactly what an attacker wants to do. But by
 controlling the return address one can build a, so called, \textit{ROP chain}
 to execute (more or less) arbitrary code, which is made out of
-\textit{gadgets}.~\cite{wiki:rop,buchanan2008good,shacham2007}
+\textit{gadgets}~\cite{wiki:rop,buchanan2008good,shacham2007}.
 
 \subsection{Gadgets}
 
@@ -679,10 +695,10 @@ the second one sets up the registers (arguments) and the last one calls the
 The final \texttt{ret} statement of a gadget is required for chaining them
 together. We not only use the buffer overflow to control \emph{one}, but
 \emph{multiple} return addresses. Because of this our payload will be composed
-of a list of return addresses (the start of each gadgets) interleaved by some
+of a list of return addresses (the start of each gadget) interleaved by some
 padding. Each provided address will be consumed one by one at the end of each
-gadgets to \emph{jump} to the next one. The payload may still contain data like
-\texttt{"/bin//sh"} if necessary.
+gadget to \emph{jump} to the next one. The payload may still contain data such
+as \texttt{"/bin//sh"} if necessary.
 
 \begin{listing}[h!]
     \codefile{../src/return_oriented_programming/gadgets.txt}
@@ -696,9 +712,10 @@ is done in \cref{src:rop_gadgets} where three different gadgets can be
 observed. Of course each gadget can be arbitrarily long, we just used a length
 of 5 instructions in this example.
 
-There are algorithms and tools available which simplify the process of finding
-such gadgets (and even whole chains) but they go beyond the scope of this
-writing.~\cite{shacham2007}
+Various tools simplifying the process of finding gadgets (and even whole
+chains) already exist, for instance
+\texttt{ROPgadget.py}\footnote{\url{https://github.com/JonathanSalwan/ROPgadget}},
+but they go beyond the scope of this writing~\cite{shacham2007}.
 
 \subsection{Example}
 
@@ -747,7 +764,7 @@ function (\texttt{system}) provided by libc.
 
 This mitigation technique was introduced to render ROP (and ret2libc) void. The
 idea behind it is quite simple, and the name gives it away already. Memory
-layout is randomize so an attacker cannot reliably use ROP. An attacker will
+layout is randomized so an attacker cannot reliably use ROP. An attacker will
 not be able to copy the exact setup of a target machine by only knowing which
 binary (and libraries) is used.
 
@@ -799,8 +816,8 @@ was not compiled as a Position Independent Executable (PIE). Since this is
 actually the default of \texttt{gcc}, most programs' \texttt{.text} segment
 will always start at the same location. One could pass the corresponding flag
 (\texttt{-pie}) to the compiler to prevent this, so ASLR would be able to
-randomize these segments too, but you'd have to compile every relevant package
-again instead of using the distribution vendor's pre-compiled binary.
+randomize these segments too, but one would have to compile every relevant
+package again instead of using the distribution vendor's pre-compiled binary.
 
 Breaking ASLR, even when the code is compiled with \texttt{-pie}, is easier
 than it seems at first. Relocation only happens to a section as a whole,
@@ -842,7 +859,7 @@ Our previous exploit can be adapted as follows. First, manage to leak a pointer
 somehow, which enables you to calculate the address offset introduced by ASLR.
 Augment your ROP chain to take the offset into account. Run the exploit. Since
 this is rather simple and we already gave an example how to calculate the
-offset, we would like to leave this as an exercise for the reader.
+offset, we leave this as an exercise for the reader.
 
 Manipulate the target source code used in the ROP example to print the address
 of \texttt{printf} first, \emph{then} read in the payload via \texttt{stdin}.
@@ -1009,8 +1026,8 @@ direct and indirect recursion as can be seen by $\texttt{funC} \to
 
 \subsection{Back to CFI}
 
-CFI is a big topic and, like other topics already mentioned, goes beyond the
-scope of this write-up. The first pointer we hand the reader aims at the
+CFI is a big topic and, similar to other topics already mentioned, goes beyond
+the scope of this write-up. The first pointer we hand the reader aims at the
 corresponding
 section\footnote{\url{http://clang.llvm.org/docs/ControlFlowIntegrity.html}} of
 the Clang documentation, but we recommend checking out the related research
@@ -1039,8 +1056,8 @@ chain \emph{arbitrary} gadgets together to pull off ROP. But we still control
 the return address and can jump to different locations as long as we stick to
 the CFG. Each transition from one node to another has to be valid, while the
 overall path taking by our ROP chain may do things never intended by the
-program's author. This concept is known as control-flow bending.~
-\cite{cf_bending}
+program's author. This concept is known as control-flow bending~
+\cite{cf_bending}.
 
 \subsection{Stack Integrity}
 
@@ -1091,9 +1108,9 @@ instead of pushing them onto the stack. This makes ROP much easier.
 
 Contrary, breaking ASLR by brute force gets much harder since the address space
 is \emph{much} bigger which yields more entropy for the randomization. Similar
-techniques like \textit{heap spraying} are basically useless, but we can still
-resort to the info leak. Breaking a canary via brute force gets only a little
-bit harder, but this has already been shown in an example.
+techniques such as \textit{heap spraying} are basically useless, but we can
+still resort to the info leak. Breaking a canary via brute force gets only a
+little bit harder, but this has already been shown in an example.
 
 \subsection{ARM}
 
